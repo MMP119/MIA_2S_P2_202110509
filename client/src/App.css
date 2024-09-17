@@ -19,6 +19,7 @@ body {
   padding: 20px;
   display: flex;
   align-items: center;
+  justify-content: space-between; /* Alinea los elementos a los extremos */
   border-radius: 5px;
   box-sizing: border-box;
 }
@@ -60,11 +61,20 @@ body {
 
 #runButton {
   background-color: #5cb85c;
-  margin-left: auto;
+  /*margin-left: auto;*/
 }
 
 #runButton:hover {
   background-color: #4cae4c;
+}
+
+#closeSession{
+  background-color: #d9534f;
+  margin-left: auto;
+}
+
+#closeSession:hover {
+  background-color: #c9302c;
 }
 
 .material-symbols-outlined { /* Iconos de Material Design */

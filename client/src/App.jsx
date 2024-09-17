@@ -1,5 +1,7 @@
 // eslint-disable-next-line no-unused-vars
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+
 import './App.css';
 
 function App() {
@@ -7,6 +9,7 @@ function App() {
   const consoleOutputRef = useRef(null);
   const editorRef = useRef(null);
   const consoleEditorRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Inicializa CodeMirror en el textarea con id 'codeInput'
@@ -38,6 +41,7 @@ function App() {
     const openButton = document.getElementById('openButton');
     const runButton = document.getElementById('runButton');
     const clearButton = document.getElementById('clearButton');
+    const closeButton = document.getElementById('closeSession');
 
     // función para el botón 'open'
     const openFile = () => {
@@ -112,9 +116,14 @@ function App() {
       consoleEditorRef.current.setValue('');
     };
 
+    const closeSession = () => {
+      navigate('/login');
+    };
+
     openButton.addEventListener('click', openFile);
     runButton.addEventListener('click', runCode);
     clearButton.addEventListener('click', clearCode);
+    closeButton.addEventListener('click', closeSession);
 
     // Cleanup event listeners on component unmount
     return () => {
@@ -122,7 +131,7 @@ function App() {
       runButton.removeEventListener('click', runCode);
       clearButton.removeEventListener('click', clearCode);
     };
-  }, []);
+  }, [navigate]);
 
   return (
     <div className="App">
@@ -136,6 +145,10 @@ function App() {
           </button>
           <button id="runButton">
             <span className="material-symbols-outlined">play_arrow</span>
+          </button>
+          <button id="closeSession">
+            <span className="material-symbols-outlined">account_circle</span>
+            Cerrar Sesión
           </button>
         </div>
         <div className="main">
