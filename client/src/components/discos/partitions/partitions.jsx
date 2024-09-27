@@ -1,12 +1,14 @@
 // eslint-disable-next-line no-unused-vars
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom'; // Para obtener el parámetro de la URL
+import { useNavigate } from 'react-router-dom';
 import './partitions.css';
 
 const ParticionVisualizador = () => {
     const [particiones, setParticiones] = useState([]);  // Almacena las particiones del disco
     const [loading, setLoading] = useState(true);        // Maneja el estado de carga
     const location = useLocation();
+    const navigate = useNavigate();  // Hook para redireccionar
 
     // Obtener el nombre del disco desde la URL
     const query = new URLSearchParams(location.search);
@@ -40,6 +42,17 @@ const ParticionVisualizador = () => {
         return <div className='discos'><h1>Cargando particiones...</h1></div>;
     }
 
+    //Funcion que maneja el clic de las particiones
+    const handleClick = async (particionId, partitionPath) => {
+        try {
+            // Redirigir a la vista de archivos con el nombre de la partición seleccionada
+            navigate(`/visualArchivos?partitionId=${particionId}&partitionPath=${partitionPath}`);
+        } catch (error) {
+            console.error("Error al redirigir a la vista de archivos:", error);
+            setLoading(false);
+        }
+    };
+
     return (
         <div className='discos'>
             <div className='discos-container'>
@@ -53,7 +66,7 @@ const ParticionVisualizador = () => {
                             <button 
                                 key={index} 
                                 className='disco'
-                                onClick={() => console.log(particion)}  // Manejador de clic para la partición
+                                onClick={() => handleClick(particion.partitionId, particion.path)}  // Manejador de clic para la partición
                             >
                                 <span className="material-symbols-outlined">clock_loader_40</span>
                                 {particion.partitionName}

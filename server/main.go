@@ -6,8 +6,10 @@ import (
 	"log"
 	"net/http"
 	analyzer "server/analyzer"
+	"server/global"
 	"server/globales"
 	util "server/util"
+	"strings"
 )
 
 type InputData struct {
@@ -91,6 +93,41 @@ func getFirstKey(m map[string]string) string {
 }
 
 
+func handleGetArchivoCarpetas(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var inputs struct {
+		IdParticion string `json:"idParticion"`
+		Path string `json:"path"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&inputs)
+	if err != nil {
+		http.Error(w, "Error al decodificar el JSON", http.StatusBadRequest)
+		return
+	}
+
+	archivosCarpetas := global.ObtenerArchivosCarpetas(inputs.IdParticion, inputs.Path)
+
+	//verificar si tiene caracteres nulos 
+	for key, value := range archivosCarpetas {
+		if strings.Contains(key, "\x00") {
+			delete(archivosCarpetas, key)
+		}
+		if strings.Contains(value, "\x00") {
+			delete(archivosCarpetas, key)
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(archivosCarpetas)
+
+	// Limpiar la variable global
+	global.ArchivosCarpetas = make(map[string]string)
+}
+
 
 func main() {
 	// Crea un nuevo multiplexor de servidores
@@ -98,6 +135,7 @@ func main() {
 	mux.HandleFunc("/analyze", handleAnalyze)
 	mux.HandleFunc("/disks", handleGetDisk)
 	mux.HandleFunc("/partitions", handleGetPartition)
+	mux.HandleFunc("/archivosCarpetas", handleGetArchivoCarpetas)
 
 	//cors 
 	corsHandler := util.EnableCors(mux)

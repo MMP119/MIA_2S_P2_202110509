@@ -190,7 +190,7 @@ func (sb *SuperBlock) createFolderInInode(path string, inodeIndex int32, parents
 	if err != nil {
 		return err
 	}
-	// Verificar si el inodo es de tipo carpeta
+	// Verificar si el inodo es de tipo carpeta, 1 = archivo, 0 = carpeta
 	if inode.I_type[0] == '1' {
 		return nil
 	}
