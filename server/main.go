@@ -109,7 +109,7 @@ func handleGetArchivoCarpetas(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	archivosCarpetas := global.ObtenerArchivosCarpetas(inputs.IdParticion, inputs.Path)
+	archivosCarpetas := global.ObtenerArchivosCarpetasRaiz(inputs.IdParticion, inputs.Path)
 
 	//verificar si tiene caracteres nulos 
 	for key, value := range archivosCarpetas {
@@ -121,8 +121,17 @@ func handleGetArchivoCarpetas(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	//crear un array de archivos y carpetas
+	archivosCarpetasArray := []map[string]string{}
+	for archivoCarpeta, tipo := range global.ArchivosCarpetas {
+		archivosCarpetasArray = append(archivosCarpetasArray, map[string]string{
+			"nombre": archivoCarpeta,
+			"tipo": tipo,
+		})
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(archivosCarpetas)
+	json.NewEncoder(w).Encode(archivosCarpetasArray)
 
 	// Limpiar la variable global
 	global.ArchivosCarpetas = make(map[string]string)

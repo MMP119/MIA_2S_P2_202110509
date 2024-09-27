@@ -21,6 +21,15 @@ func ParserMkdisk(tokens []string) (*structures.MKDISK, string,error) {
 
 	matches := re.FindAllString(args, -1)
 
+	//si no se reconoció algún token
+	if len(matches) != len(tokens) {
+		for _, token := range tokens {
+			if !re.MatchString(token) {
+				return nil, "", fmt.Errorf("parámetro inválido: %s", token)
+			}
+		}
+	}
+
 	for _, match := range matches {
 
 		kv := strings.SplitN(match, "=", 2)

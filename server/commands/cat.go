@@ -106,6 +106,30 @@ func CommandCAT(cmd *CAT) (string, error) {
 			for _, content := range folderBlock.B_content {
 				//fmt.Println(strings.Trim(string(content.B_name[:]), "\x00"))
 
+				if(strings.Trim(string(content.B_name[:]), "\x00") == "users.txt") && (strings.Trim(string(content.B_name[:]), "\x00") == destDir){
+					//moverse al inodo que apunte el bloque
+					err = inode.Deserialize(partitionPath, int64(partitionSuperblock.S_inode_start+(content.B_inodo*partitionSuperblock.S_inode_size)))
+					if err != nil {
+						return "Error al obtener el inodo", fmt.Errorf("error al obtener el inodo: %v", err)
+					}
+
+					//recorrer los bloques del inodo para obtener el contenido del archivo
+					fileBlock := &structures.FileBlock{}
+					salida := ""
+					for _, block := range inode.I_block {
+						if block != -1 {
+							err = fileBlock.Deserialize(partitionPath, int64(partitionSuperblock.S_block_start+(block*partitionSuperblock.S_block_size)))
+							if err != nil {
+								return "Error al obtener el bloque", fmt.Errorf("error al obtener el bloque: %v", err)
+							}
+							//eliminar caracteres nulos
+							salida += strings.Trim(string(fileBlock.B_content[:]), "\x00")
+							// return salida, nil
+						}
+					}
+					return salida, nil
+				}
+
 				if content.B_inodo != -1 && content.B_inodo != 0 && strings.Trim(string(content.B_name[:]), "\x00") != "." && strings.Trim(string(content.B_name[:]), "\x00") != ".." && strings.Trim(string(content.B_name[:]), "\x00") != "users.txt" {
 					//fmt.Println("Bloque encontrado:", content.B_inodo, string(content.B_name[:]))
 

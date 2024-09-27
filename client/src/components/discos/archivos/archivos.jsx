@@ -10,12 +10,13 @@ const ArchivosVisualizador = () => {
     const[archivo, setArchivos] = useState([]); // Almacena los archivos de la carpeta
     const[loading, setLoading] = useState(true); // Para manejar el estado de carga
     //const navigate = useNavigate(); // Hook para redireccionar
-    const [ruta] = useState("RUTA");
+    // eslint-disable-next-line no-unused-vars
+    const [ruta, setRuta] = useState("");
 
     // ontener el id de la particion desde la URL y el path
     const query = new URLSearchParams(location.search);
     const idParticion = query.get('partitionId');
-    const path = query.get('partitionPath');
+    const path = ruta;
 
     // Función para obtener los archivos de la carpeta desde el backend
     useEffect(() => {
@@ -27,7 +28,9 @@ const ArchivosVisualizador = () => {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({ idParticion, path }),  // Enviar el id de la particion y el path al backend
+                    
                 });
+                console.log(path)
                 const data = await response.json();
                 setArchivos(data);  // Actualiza el estado con los archivos obtenidos
                 setLoading(false);
@@ -46,6 +49,15 @@ const ArchivosVisualizador = () => {
         return <div className='discos'><h1>Cargando archivos...</h1></div>;
     }
 
+    const handleFileClick = (fileName, isFolder) => {
+        if(isFolder){
+            let newPath = `${ruta}/${fileName}`;
+            setRuta(newPath);
+            //limpiar la ruta
+            newPath = "";
+        }
+    };
+
     
     return (
         <div className='discos'>
@@ -57,22 +69,20 @@ const ArchivosVisualizador = () => {
                 <br></br>
                 <br></br>
                 <div className="discos-grid">
-                    {   
-                        Object.keys(archivo).map((archivo, index) => (
-                            
+                    {Array.isArray(archivo) && archivo.length > 0 &&(
+                        archivo.map((file, index) =>(
                             <button 
                                 key={index} 
                                 className='disco'
-                                onClick={() => console.log(archivo)}  // Manejador de clic para el archivo
+                                onClick={() => handleFileClick(file.nombre, file.tipo)}  // Manejador de clic para el archivo
                             >
                                 <span className="material-symbols-outlined">
-                                    {archivo.includes('.') ? 'insert_drive_file' : 'folder'}
+                                    {file.tipo =='archivo' ? 'insert_drive_file' : 'folder'}
                                 </span>
-                                {archivo}
+                                {file.nombre}
                             </button>
                         ))
-                        //limpiar el arreglo de archivo
-
+                        )
                     }
                 </div>
             </div>

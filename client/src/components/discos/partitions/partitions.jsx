@@ -43,10 +43,10 @@ const ParticionVisualizador = () => {
     }
 
     //Funcion que maneja el clic de las particiones
-    const handleClick = async (particionId, partitionPath) => {
+    const handleClick = async (particionId) => {
         try {
             // Redirigir a la vista de archivos con el nombre de la partición seleccionada
-            navigate(`/visualArchivos?partitionId=${particionId}&partitionPath=${partitionPath}`);
+            navigate(`/visualArchivos?partitionId=${particionId}`);
         } catch (error) {
             console.error("Error al redirigir a la vista de archivos:", error);
             setLoading(false);

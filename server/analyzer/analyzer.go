@@ -19,9 +19,9 @@ func Analyzer(inputs []string) ([]string, []string) {
         inputs := strings.TrimSpace(input)
         if inputs == "" || strings.HasPrefix(inputs, "#") {
             //continue //ignorar comentarios y líneas en blanco
-            fmt.Println(inputs)
+            fmt.Println(inputs+"\n")
             // retornar los comentarios, para que se muestren en la consola
-            results = append(results, inputs)
+            results = append(results, "\n"+inputs+"\n")
             continue
         }
 
