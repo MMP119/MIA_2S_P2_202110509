@@ -116,26 +116,5 @@ func ParserFdisk(tokens []string) (*structures.FDISK, string, error) {
 		return nil, msg, err
 	}
 
-
-	//IMPRIMIR  ver MBR y Particiones -----------------------------------------
-	
-	//Crear una instancia de MBR
-	// var mbr structures.MBR
-
-	// //Deserializar la estructura MBR desde un archivo binario para obtener la información 
-	// msg, err1 := mbr.DeserializeMBR(cmd.Path)
-	// if err1 != nil {
-	// 	fmt.Println("Error:", err1)
-	// 	return nil, msg, err1
-	// }
-
-	// //Imprimir la estructura
-	// mbr.Print()
-	// fmt.Println("-----------------------------")
-
-	// mbr.PrintPartitions()
-	//---------------------------------------------------------------------
-	
-
 	return cmd, "Comando FDISK: realizado correctamente", nil // Devuelve el comando FDISK creado
 }

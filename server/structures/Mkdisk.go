@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	util "server/util"
+	guardarPath "server/globales"
 )
 
 type MKDISK struct {
@@ -66,5 +67,11 @@ func CreateDisk(mkdisk *MKDISK, sizeBytes int) (string, error) {
 		}
 		sizeBytes -= writeSize // Resta el tamaño escrito del tamaño total
 	}
+	
+	//obtener el nombre del disco
+	idDisco := filepath.Base(mkdisk.Path)
+
+	guardarPath.SetPathDisk(idDisco, mkdisk.Path)
+
 	return "",nil
 }

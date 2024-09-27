@@ -20,7 +20,7 @@ const Login = () => {
     };
 
     const handleLogin = () => {
-        // Aquí puedes implementar la lógica para autenticar al usuario
+        // implementar la lógica para autenticar al usuario
         console.log('Partition ID:', partitionId);
         console.log('Username:', username);
         console.log('Password:', password);

@@ -8,6 +8,7 @@ import (
 	structures "server/structures"
 	global "server/global"
 	util "server/util"
+	particionesOnDisk "server/globales"
 )
 
 type MOUNT struct {
@@ -120,6 +121,9 @@ func CommandMount(mount *MOUNT) (string, error) {
 	// guardar la particion modificada en el MBR
 	mbr.Mbr_partitions[indexPartition] = *partition
 
+	// guardar la particion montada en la lista de particiones montadas en el disco
+	particionesOnDisk.SetPartitionOnDisk(mount.Name, id, mount.Path)
+	
 	// serializar el MBR
 	msg, err = mbr.SerializeMBR(mount.Path)
 	if err != nil {
