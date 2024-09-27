@@ -109,7 +109,12 @@ func handleGetArchivoCarpetas(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	archivosCarpetas := global.ObtenerArchivosCarpetasRaiz(inputs.IdParticion, inputs.Path)
+	var archivosCarpetas map[string]string
+	archivosCarpetas, err = global.ObtenerArchivosCarpetasRaiz(inputs.IdParticion, inputs.Path)
+	if err != nil {
+		http.Error(w, "Error al obtener archivos y carpetas", http.StatusBadRequest)
+		return
+	}
 
 	//verificar si tiene caracteres nulos 
 	for key, value := range archivosCarpetas {

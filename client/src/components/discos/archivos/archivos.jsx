@@ -30,7 +30,6 @@ const ArchivosVisualizador = () => {
                     body: JSON.stringify({ idParticion, path }),  // Enviar el id de la particion y el path al backend
                     
                 });
-                console.log(path)
                 const data = await response.json();
                 setArchivos(data);  // Actualiza el estado con los archivos obtenidos
                 setLoading(false);
@@ -65,26 +64,46 @@ const ArchivosVisualizador = () => {
                 <h1>Visualizador del Sistema de Archivos</h1>
                 <p>Navegue entre carpetas o visualice archivos</p>
                 <br></br>
-                <textarea id="ruta"  rows="2" cols="100" readOnly value={ruta}></textarea>
+                <textarea id="ruta" rows="2" cols="100" readOnly value={ruta}></textarea>
                 <br></br>
                 <br></br>
+    
+                {/* Recorrer archivos y renderizar botones o textarea para tipos desconocidos */}
                 <div className="discos-grid">
-                    {Array.isArray(archivo) && archivo.length > 0 &&(
-                        archivo.map((file, index) =>(
-                            <button 
-                                key={index} 
-                                className='disco'
-                                onClick={() => handleFileClick(file.nombre, file.tipo)}  // Manejador de clic para el archivo
-                            >
-                                <span className="material-symbols-outlined">
-                                    {file.tipo =='archivo' ? 'insert_drive_file' : 'folder'}
-                                </span>
-                                {file.nombre}
-                            </button>
+                    {Array.isArray(archivo) && archivo.length > 0 && (
+                        archivo.map((file, index) => (
+                            file.tipo === 'archivo' || file.tipo === 'carpeta' ? (
+                                // Si es archivo o carpeta, muestra el botón con el ícono correspondiente
+                                <button 
+                                    key={index} 
+                                    className='disco'
+                                    onClick={() => handleFileClick(file.nombre, file.tipo)}  // Manejador de clic para el archivo o carpeta
+                                >
+                                    <span className="material-symbols-outlined">
+                                        {file.tipo === 'archivo' ? 'insert_drive_file' : 'folder'}
+                                    </span>
+                                    {file.nombre}
+                                </button>
+                            ) : null // No renderiza nada aquí si no es archivo o carpeta
                         ))
-                        )
-                    }
+                    )}
                 </div>
+    
+                {/* Renderizar textarea fuera de discos-grid si el tipo es desconocido */}
+                {Array.isArray(archivo) && archivo.length > 0 && (
+                    archivo.map((file, index) => (
+                        file.tipo === 'salida' && file.tipo !== 'carpeta' ? (
+                            <textarea 
+                                id='ruta'
+                                key={index} 
+                                rows="10" 
+                                cols="100" 
+                                readOnly 
+                                value={`${file.nombre}`} 
+                            />
+                        ) : null
+                    ))
+                )}
             </div>
         </div>
     );

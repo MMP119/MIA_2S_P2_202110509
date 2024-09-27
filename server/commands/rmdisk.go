@@ -6,6 +6,8 @@ import (
 	"regexp" 
 	util "server/util" 
 	"strings" 
+	"path/filepath"
+	"server/globales"
 )
 
 // RMDISK estructura que representa el comando rmdisk con su parámetro
@@ -63,6 +65,9 @@ func ParserRmdisk(tokens []string) (*RMDISK, string, error) {
 	if err != nil {
 		return nil, "Error al borrar Disco", err // Devuelve un error si no se pudo eliminar el disco
 	}
+
+	idDisco := filepath.Base(cmd.path)
+	globales.DeletePathDisk(idDisco) // Elimina el disco del mapa de discos
 
 	return cmd, successMsg ,nil // Devuelve el comando RMDISK creado
 }

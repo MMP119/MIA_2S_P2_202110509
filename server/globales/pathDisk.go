@@ -17,3 +17,8 @@ func SetPathDisk(id string, path string) {
 func GetPathDisks() map[string]string {
 	return PathDisks
 }
+
+//borrar un disco en especifico
+func DeletePathDisk(id string) {
+	delete(PathDisks, id)
+}
