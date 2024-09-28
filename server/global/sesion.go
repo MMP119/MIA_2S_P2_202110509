@@ -1,10 +1,20 @@
 package global
 
-import "sync"
+import (
+	"server/structures"
+	"strings"
+	"sync"
+)
 
 // Mapa global para almacenar el estado de las sesiones por partición y usuario
 var sessionMap = make(map[string]map[string]bool)
 var mutex sync.Mutex // Para sincronización
+
+//variable para guardar el idParticion, usuario y password
+var (
+    credenciales = make(map[string]map[string]string)
+)
+
 
 // Función para iniciar sesión en una partición (marcar sesión activa para un usuario en esa partición)
 func ActivateSession(partitionID string, user string) {
@@ -107,4 +117,81 @@ func GetActiveUsers(partitionID string) []string {
         }
     }
     return activeUsers
+}
+
+
+func IniciarSesion(idParticion string, usuario string, password string){
+    //guardar el id, usuario y password, si ya existen, no se sobreescriben
+    if _, ok := credenciales[idParticion]; !ok{
+        credenciales[idParticion] = make(map[string]string)
+    }
+    credenciales[idParticion][usuario] = password
+}
+
+
+func ComprobarCredenciales(idParticion string, usuario string, password string)bool{
+    //verificar si el id, usuario y password son correctos
+    if credenciales[idParticion][usuario] == password{
+        ActivateSession(idParticion, usuario)
+        return true
+    }else{
+        return false
+    }
+}
+
+
+
+func VerificarSesion(idParticion string, usuario string, password string)(string, error){
+    
+    partitionSuperblock, _, partitionPath, err := GetMountedPartitionSuperblock(idParticion)
+	if err != nil {
+		return "1 no se puede obtener el superbloque", err
+	}
+
+    inode := &structures.Inode{}
+    
+    err = inode.Deserialize(partitionPath, int64(partitionSuperblock.S_inode_start+(0*partitionSuperblock.S_inode_size)))
+    if err != nil {
+        return "2 no se puede deserealizar", err
+    }
+    salida := ""
+    for _, block := range inode.I_block{
+        if block != -1{
+            folderBlock := &structures.FolderBlock{}
+            err = folderBlock.Deserialize(partitionPath, int64(partitionSuperblock.S_block_start+(block*partitionSuperblock.S_block_size)))
+            if err != nil {
+                return "3 no se puede deserealizar", err
+            }
+            for _, content := range folderBlock.B_content{
+                name := strings.Trim(string(content.B_name[:]), "\x00")
+                if name == "users.txt"{
+                    inode = &structures.Inode{}
+                    err = inode.Deserialize(partitionPath, int64(partitionSuperblock.S_inode_start+(content.B_inodo*partitionSuperblock.S_inode_size)))
+                    if err != nil {
+                        return "4 no se puede deserealizar", err
+                    }
+
+                    fileBlock := &structures.FileBlock{}
+                    for _, block := range inode.I_block{
+                        if block != -1{
+                            err = fileBlock.Deserialize(partitionPath, int64(partitionSuperblock.S_block_start+(block*partitionSuperblock.S_block_size)))
+                            if err != nil {
+                                return "5 no se puede deserealizar", err
+                            }
+                            salida = strings.Trim(string(fileBlock.B_content[:]), "\x00")  
+                            salida = strings.ReplaceAll(salida, "\r\n", "\n")
+                            users := strings.Split(salida, "\n")
+                            for _, user := range users{
+                                values := strings.Split(user, ",")
+                                if len(values)>=5 && values[1] == "U"{
+                                    IniciarSesion(idParticion, values[3], values[4])
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return "", nil
 }

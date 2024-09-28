@@ -117,7 +117,7 @@ function App() {
     };
 
     const closeSession = () => {
-      navigate('/login');
+      navigate('/');
     };
 
     openButton.addEventListener('click', openFile);

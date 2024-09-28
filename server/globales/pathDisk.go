@@ -1,5 +1,6 @@
 package globales
 
+
 var (
 	PathDisks = make(map[string]string)
 )
@@ -14,8 +15,21 @@ func SetPathDisk(id string, path string) {
 }
 
 // hay que pasarle el map al frontend
-func GetPathDisks() map[string]string {
-	return PathDisks
+func GetPathDisks(idDisk string) map[string]string {
+
+	if idDisk == "root" {
+		return PathDisks
+	}
+
+	//mountedPartition, partitionPath, err := global.GetMountedPartition(idDisk)
+
+	result := make(map[string]string)
+	for id, path := range PathDisks {
+		if id == idDisk {
+			result[id] = path
+		}
+	}
+	return result
 }
 
 //borrar un disco en especifico

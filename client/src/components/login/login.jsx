@@ -1,11 +1,14 @@
 // eslint-disable-next-line no-unused-vars
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './login.css';
 
 const Login = () => {
     const [partitionId, setPartitionId] = useState('');
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [login, setLogin] = useState({});
+    const navigate = useNavigate();
 
     const handlePartitionIdChange = (e) => {
         setPartitionId(e.target.value);
@@ -19,11 +22,44 @@ const Login = () => {
         setPassword(e.target.value);
     };
 
-    const handleLogin = () => {
+
+    const handleLogin = async() => {
         // implementar la lógica para autenticar al usuario
-        console.log('Partition ID:', partitionId);
-        console.log('Username:', username);
-        console.log('Password:', password);
+        if (partitionId === 'root' && username === 'root' && password === 'root') {
+            console.log('Usuario autenticado');
+            // redirigir al usuario a la página de comandos
+            navigate('/root');
+        }else if(partitionId === 'root' && username === 'root' && password === '123'){
+            console.log('Usuario autenticado');
+            // redirigir al usuario a la página de discos
+            navigate('/visualDiscos?diskID=root');
+        }
+
+        try {
+            const response = await fetch('http://localhost:8080/inicioSesion', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ partitionId, username, password }),
+            });
+            const data = await response.json();
+            setLogin(data);
+
+            console.log('Login:', partitionId, username, password);
+
+            // Verifica si el login fue exitoso
+            if (login === true) {
+                console.log('Usuario autenticado');
+                navigate(`/visualDiscos?diskID=${partitionId}`);
+            } else {
+                console.log('Credenciales incorrectas');
+            }
+        } catch (error) {
+            console.error("Error fetching login:", error);
+        }
+
+
     };
 
     return (

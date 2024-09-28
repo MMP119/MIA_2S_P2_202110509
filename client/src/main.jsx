@@ -12,8 +12,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <Router>
       <Routes>
-        <Route path='/' element={<App />} />
-        <Route path='/login' element={<Login />} />
+        <Route path='/root' element={<App />} />
+        <Route path='/' element={<Login />} />
         <Route path='/visualDiscos' element={<VisualDiscos />} />
         <Route path='/visualPartitions' element={<PartitionVisual />} />
         <Route path='/visualArchivos' element={<ArchivosVisualizador />} />

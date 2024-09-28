@@ -8,11 +8,23 @@ const DiscosVisualizador = () => {
     const [loading, setLoading] = useState(true) // Para manejar el estado de carga
     const navigate = useNavigate();  // Hook para redireccionar
 
+    const query = new URLSearchParams(location.search);
+    // eslint-disable-next-line no-unused-vars
+    const diskID = query.get('diskID');
+
     // Función para obtener los discos desde el backend
     useEffect(() => {
         const fetchDiscos = async () => {
             try {
-                const response = await fetch('http://localhost:8080/disks');  // Endpoint del backend
+                const response = await fetch('http://localhost:8080/disks',
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ diskID })
+                    }
+                );  // Endpoint del backend
                 const data = await response.json();
                 setDiscos(data);  // Actualiza el estado con los discos obtenidos
                 setLoading(false);  // Termina la carga
@@ -23,7 +35,7 @@ const DiscosVisualizador = () => {
         };
 
         fetchDiscos();  // Llama a la función al montar el componente
-    }, []);
+    }, [diskID]);
 
     // Función que maneja el clic de los discos
     const handleClick = async (disco) => {

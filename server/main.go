@@ -42,12 +42,21 @@ func handleAnalyze(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleGetDisk(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
+	if r.Method != http.MethodPost {
 		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
 		return
 	}
 
-	pathDisks := globales.GetPathDisks()
+	var inputs struct {
+		DiskID string `json:"diskID"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&inputs)
+	if err != nil {
+		http.Error(w, "Error al decodificar el JSON", http.StatusBadRequest)
+		return
+	}
+
+	pathDisks := global.GetPathDisk(inputs.DiskID)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(pathDisks)
@@ -143,6 +152,35 @@ func handleGetArchivoCarpetas(w http.ResponseWriter, r *http.Request) {
 }
 
 
+func handleInicioSesion(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var inputs struct {
+		PartitionId string `json:"partitionId"`
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&inputs)
+	if err != nil {
+		http.Error(w, "Error al decodificar el JSON", http.StatusBadRequest)
+		return
+	}
+	mensaje, err := global.VerificarSesion(inputs.PartitionId, inputs.Username, inputs.Password)
+	if err != nil {
+		http.Error(w, mensaje, http.StatusBadRequest)
+		return
+	}
+
+	inicio := global.ComprobarCredenciales(inputs.PartitionId, inputs.Username, inputs.Password)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(inicio)
+}
+
+
 func main() {
 	// Crea un nuevo multiplexor de servidores
 	mux := http.NewServeMux()
@@ -150,6 +188,7 @@ func main() {
 	mux.HandleFunc("/disks", handleGetDisk)
 	mux.HandleFunc("/partitions", handleGetPartition)
 	mux.HandleFunc("/archivosCarpetas", handleGetArchivoCarpetas)
+	mux.HandleFunc("/inicioSesion", handleInicioSesion)
 
 	//cors 
 	corsHandler := util.EnableCors(mux)
