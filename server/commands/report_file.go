@@ -1,4 +1,4 @@
-package reports
+package commands
 
 import (
 	"fmt"
@@ -94,7 +94,7 @@ func REPfile(pathArchivo string) (string, error) {
 								return "Error al obtener el inodo", fmt.Errorf("error al obtener el inodo: %v", err)
 							}
 							msg := ""
-							msg, err = recursiveBlock(inode, partitionSuperblock, partitionPath, parentDirs, destDir)
+							msg, err = recursiveBlock1(inode, partitionSuperblock, partitionPath, parentDirs, destDir)
 							if err != nil {
 								return msg, err
 							}
@@ -169,7 +169,7 @@ func REPfile(pathArchivo string) (string, error) {
 }
 
 // funcion recursiva para analizar los bloques de un inodo y moverse al bloque
-func recursiveBlock(inode *structures.Inode, partitionSuperblock *structures.SuperBlock, partitionPath string, parentDirs []string, destDir string) (string, error) {
+func recursiveBlock1(inode *structures.Inode, partitionSuperblock *structures.SuperBlock, partitionPath string, parentDirs []string, destDir string) (string, error) {
 	//verificar sobre los bloques del inodo, recorrerlos para encontar el bloque que contiene la ruta para llegar al archivo
 	folderBlock := &structures.FolderBlock{}
 
@@ -199,7 +199,7 @@ func recursiveBlock(inode *structures.Inode, partitionSuperblock *structures.Sup
 							//si ya llegamos al último directorio padre, entonces inodo que apunta el bloque tiene el bloque que contiene el archivo
 							if i == len(parentDirs)-1 {
 								msg := ""
-								msg, err = recursiveBlock(inode, partitionSuperblock, partitionPath, parentDirs, destDir)
+								msg, err = recursiveBlock1(inode, partitionSuperblock, partitionPath, parentDirs, destDir)
 								if err != nil {
 									return msg, err
 								}
@@ -208,7 +208,7 @@ func recursiveBlock(inode *structures.Inode, partitionSuperblock *structures.Sup
 							} else {
 								//si no, entonces seguimos buscando en otro bloque del inodo
 								msg := ""
-								msg, err = recursiveBlock(inode, partitionSuperblock, partitionPath, parentDirs, destDir)
+								msg, err = recursiveBlock1(inode, partitionSuperblock, partitionPath, parentDirs, destDir)
 								if err != nil {
 									return msg, err
 								}

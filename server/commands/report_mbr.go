@@ -1,4 +1,4 @@
-package reports
+package commands
 
 import (
 	"encoding/binary"
@@ -13,6 +13,7 @@ import (
 
 // ReportMBR genera un reporte del MBR y lo guarda en la ruta especificada
 func ReportMBR(mbr *structures.MBR, path string, diskPath string) error {
+
 	// Crear las carpetas padre si no existen
 	err := utils.CreateParentDirs(path)
 	if err != nil {
@@ -64,7 +65,7 @@ func ReportMBR(mbr *structures.MBR, path string, diskPath string) error {
 			defer file.Close()
 
 			// Leer el primer EBR en la partición extendida
-			var ebr structures.EBR
+			var ebr EBR
 			_, err = file.Seek(int64(part.Part_start), 0)
 			if err != nil {
 				return fmt.Errorf("error al moverse al inicio de la partición extendida: %v", err)

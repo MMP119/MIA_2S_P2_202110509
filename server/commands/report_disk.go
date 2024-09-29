@@ -1,4 +1,4 @@
-package reports
+package commands
 
 import (
 	"encoding/binary"
@@ -65,7 +65,7 @@ func ReportDisk(mbr *structures.MBR, path string, diskPath string) error {
             }
             defer file.Close()
 
-            var ebr structures.EBR
+            var ebr EBR
             _, err = file.Seek(int64(part.Part_start), 0)
             if err != nil {
                 return fmt.Errorf("error al moverse al inicio de la partición extendida: %v", err)

@@ -6,7 +6,7 @@ import (
 	"regexp"
 	global "server/global"
 	"strings"
-	reports "server/reports"
+	//"/reports"
 
 )
 
@@ -98,56 +98,6 @@ func contains(list []string, value string) bool {
 
 
 func CommandRep(rep *REP) (string, error) {
-	// Crear una nueva estructura MBR
-	// mbr := &structures.MBR{}
-
-	// // Deserializar la estructura MBR desde el archivo binario
-	// msg, err := mbr.DeserializeMBR(cmd.Path)
-	// if err != nil {
-	// 	return msg, err
-	// }
-
-	// // Imprimir la información del MBR
-	// fmt.Println("\nMBR\n----------------")
-	// mbr.Print()
-
-	// // Imprimir la información de cada partición
-	// fmt.Println("\nParticiones\n----------------")
-	// mbr.PrintPartitions()
-
-	// // Imprimir partidas montadas
-	// fmt.Println("\nParticiones montadas\n----------------")
-
-	// for id, path := range global.MountedPartitions {
-	// 	fmt.Printf("ID: %s, PATH: %s\n", id, path)
-	// }
-
-	// // Imprimir el SuperBloque de cada partición montada
-	// index := 0
-	// // Iterar sobre cada partición montada
-	// for id, path := range global.MountedPartitions {
-	// 	// Crear una nueva estructura SuperBloque
-	// 	sb := &structures.SuperBlock{}
-	// 	// Deserializar la estructura SuperBloque desde el archivo binario
-	// 	err := sb.Deserialize(path, int64(mbr.Mbr_partitions[index].Part_start))
-	// 	if err != nil {
-	// 		fmt.Printf("Error al leer el SuperBloque de la partición %s: %s\n", id, err)
-	// 		continue
-	// 	}
-	// 	fmt.Printf("\nPartición %s\n----------------", id)
-
-	// 	// Imprimir la información del SuperBloque
-	// 	fmt.Println("\nSuperBloque:")
-	// 	sb.Print()
-
-	// 	// Imprimir los inodos
-	// 	sb.PrintInodes(path)
-
-	// 	// Imprimir los bloques
-	// 	sb.PrintBlocks(path)
-
-	// 	index++
-	// }
 
 	mountedMbr, mountedSb, mountedDiskPath, err := global.GetMountedPartitionRep(rep.id)
 	if err != nil {
@@ -157,39 +107,39 @@ func CommandRep(rep *REP) (string, error) {
 	switch rep.name{
 
 	case "mbr":
-		err = reports.ReportMBR(mountedMbr, rep.Path, mountedDiskPath)
+		err = ReportMBR(mountedMbr, rep.Path, mountedDiskPath)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 		}
 
 	case "disk":
-		err = reports.ReportDisk(mountedMbr, rep.Path, mountedDiskPath)
+		err = ReportDisk(mountedMbr, rep.Path, mountedDiskPath)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 		}
 
 	case "inode":
-		err = reports.ReportInode(mountedSb, mountedDiskPath, rep.Path)
+		err = ReportInode(mountedSb, mountedDiskPath, rep.Path)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 		}
 	case "bm_inode":
-		err = reports.ReportBMInode(mountedSb, mountedDiskPath, rep.Path)
+		err = ReportBMInode(mountedSb, mountedDiskPath, rep.Path)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 		}
 	case "sb":
-		err = reports.ReportSB(mountedSb, rep.Path, mountedDiskPath)
+		err = ReportSB(mountedSb, rep.Path, mountedDiskPath)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 		}
 	case "block":
-		err = reports.ReportBlock(mountedSb, mountedDiskPath, rep.Path)
+		err = ReportBlock(mountedSb, mountedDiskPath, rep.Path)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 		}
 	case "file":
-		err = reports.ReportFile(mountedSb, rep.Path, rep.path_file_ls)
+		err = ReportFile(mountedSb, rep.Path, rep.path_file_ls)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 		}

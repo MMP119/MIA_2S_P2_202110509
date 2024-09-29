@@ -12,6 +12,11 @@ var (
 	MountedPartitions map[string]string = make(map[string]string)
 )
 
+
+var(
+	ParticionesMontadas = make(map[string]string)
+)
+
 // GetMountedPartition obtiene la partición montada con el id especificado
 func GetMountedPartition(id string) (*structures.PARTITION, string, error) {
 	// Obtener el path de la partición montada
@@ -36,6 +41,24 @@ func GetMountedPartition(id string) (*structures.PARTITION, string, error) {
 	}
 
 	return partition, path, nil
+}
+
+
+//funcion para desmontar una particion
+func UnmountPartition(id string) (string, error) {
+
+	// Eliminar la partición montada de la lista de particiones montadas
+	delete(MountedPartitions, id)
+
+	//map[Particion1:091A Particion2:092A], eliminar la particion si encuentra el id
+	for key, value := range ParticionesMontadas {
+		if value == id {
+			delete(ParticionesMontadas, key)
+			break
+		}
+	}
+
+	return "", nil
 }
 
 

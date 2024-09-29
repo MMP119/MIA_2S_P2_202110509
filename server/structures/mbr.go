@@ -71,6 +71,11 @@ func (mbr *MBR) SerializeMBR(path string) (string, error) {
 		return "Error al escribir en el archivo al serializar MBR",err
 	}
 
+	err = file.Sync()
+	if err != nil {
+		return "Error al sincronizar los datos en el archivo", err
+	}
+
 	return "",nil
 }
 

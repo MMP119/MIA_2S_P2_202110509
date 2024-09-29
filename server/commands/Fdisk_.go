@@ -1,11 +1,14 @@
-package structures
+package commands
 
 import (
 	//"encoding/binary"
 	"encoding/binary"
 	"fmt"
 	"os"
+	global "server/global"
+	structures "server/structures"
 	util "server/util"
+	"strings"
 )
 
 // FDISK estructura que representa el comando fdisk con sus parámetros
@@ -16,6 +19,8 @@ type FDISK struct {
 	TypE  string // Tipo de partición (P, E, L)
 	Fit  string // Tipo de ajuste (BF, FF, WF); por defecto WF
 	Name string // Nombre de la partición
+	Delete string
+	Add int
 }
 
 func CommandFdisk(fdisk *FDISK) (string, error) {
@@ -28,6 +33,28 @@ func CommandFdisk(fdisk *FDISK) (string, error) {
 	}
 
 	var msg string
+
+	if fdisk.Delete != "" {
+		
+		//si fdisk.Delete == "fast" se elimina la particion de manera rapida, marca como vacio el espacio de la particion
+		if(fdisk.Delete == "fast"){
+			msg, err = DeleteFastPartition(fdisk)
+			if err != nil {
+				fmt.Println("Error deleting partition:", err)
+				return msg, err
+			}
+		}
+
+		//si fdisk.Delete == "full" se elimina la particion de manera completa, marca como vacio el espacio de la particion y elimina los datos de la particion, marca con \0 el espacio de la particion
+		if(fdisk.Delete == "full"){
+			msg, err = DeleteFullPartition(fdisk)
+			if err != nil {
+				fmt.Println("Error deleting partition:", err)
+				return msg, err
+			}
+		}
+		return msg, nil
+	}
 
 	// para crear la particion primaria
 	if(fdisk.TypE == "P"){
@@ -58,9 +85,127 @@ func CommandFdisk(fdisk *FDISK) (string, error) {
 }
 
 
+//funcion para eliminar de manera rapida una particion
+func DeleteFastPartition(fdisk *FDISK) (string, error) {
+
+	id := global.ParticionesMontadas[fdisk.Name]
+
+	mountedMbr, _, mountedDiskPath, err := global.GetMountedPartitionRep(id) //retorna *structures.MBR, *structures.SuperBlock, string, error
+	if err != nil {
+		return "", err
+	}
+
+	//verificar las particiones dentro del mbr
+	for i := range mountedMbr.Mbr_partitions {
+		partition := &mountedMbr.Mbr_partitions[i] // Tomamos un puntero a la partición real
+		if strings.Trim(string(partition.Part_name[:]), "\x00") == fdisk.Name {
+			// Eliminar la partición
+			partition.Part_status = [1]byte{'2'}
+			partition.Part_type = [1]byte{'0'}
+			partition.Part_fit = [1]byte{'0'}
+			partition.Part_start = int32(-1)
+			partition.Part_size = int32(-1)
+			partition.Part_name = [16]byte{'0'}
+			partition.Part_correlative = int32(0)
+			partition.Part_id = [4]byte{'0'}
+			
+			// Guardar los cambios en el disco
+			msg, err := mountedMbr.SerializeMBR(mountedDiskPath)
+			if err != nil {
+				return msg, fmt.Errorf("error escribiendo el MBR al disco: %s", err)
+			}
+			break
+		}
+	}
+
+	msg, err := mountedMbr.SerializeMBR(mountedDiskPath)
+	if err != nil {
+		return msg, fmt.Errorf("error al escribir el MBR: %s", err)
+	}
+
+	global.UnmountPartition(id)
+
+	return "Partición eliminada exitosamente", nil
+}
+
+
+
+//funcion para eliminar de manera completa una particion
+func DeleteFullPartition(fdisk *FDISK) (string, error) {
+
+	var mbr structures.MBR
+
+	msg, err := mbr.DeserializeMBR(fdisk.Path)
+	if err != nil {
+		return msg, fmt.Errorf("error leyendo el MBR del disco: %s", err)
+	}
+
+	// Buscar la partición a eliminar
+	var partitionToDelete *structures.PARTITION
+	for i, partition := range mbr.Mbr_partitions {
+		if strings.Trim(string(partition.Part_name[:]),"\x00") == fdisk.Name {
+			partitionToDelete = &mbr.Mbr_partitions[i]
+			break
+		}
+	}
+
+	if partitionToDelete == nil {
+		return "No se encontró la partición a eliminar", nil
+	}
+
+	start := partitionToDelete.Part_start
+	size := partitionToDelete.Part_size
+
+	// Marcar la partición como eliminada
+	partitionToDelete.Part_status[0] = '2'
+	partitionToDelete.Part_type[0] = '0'
+	partitionToDelete.Part_fit[0] = '0'
+	partitionToDelete.Part_start = int32(-1)
+	partitionToDelete.Part_size = int32(-1)
+	partitionToDelete.Part_name = [16]byte{0}
+	partitionToDelete.Part_correlative = int32(0)
+	partitionToDelete.Part_id = [4]byte{0}
+
+	partitionToDelete.Print()
+
+	//rellebar con \0 el espacio de la particion
+	file, err := os.OpenFile(fdisk.Path, os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil {
+		return "Error al abrir el archivo del disco", err
+	}
+
+	// Moverme al inicio de la partición
+	_, err = file.Seek(int64(start), 0)
+	if err != nil {
+		return "Error al moverse al inicio de la partición", err
+	}
+
+	// Rellenar el espacio de la partición con \0
+	emptyBytes := make([]byte, size)
+	for i := range emptyBytes {
+		emptyBytes[i] = 0
+	}
+
+	_, err = file.Write(emptyBytes)
+	if err != nil {
+		return "Error al rellenar el espacio de la partición", err
+	}
+
+	// Serializar el MBR modificado
+	msg, err = mbr.SerializeMBR(fdisk.Path)
+	if err != nil {
+		return msg, fmt.Errorf("error escribiendo el MBR al disco: %s", err)
+	}
+
+	return "Partición eliminada exitosamente", nil
+
+}
+
+
+
 func CreatePrimaryPartition(fdisk *FDISK, sizeBytes int)(string, error){
 	
-	var mbr MBR
+	var mbr structures.MBR
 	
 	msg, err := mbr.DeserializeMBR(fdisk.Path)
 	if err != nil {
@@ -110,7 +255,7 @@ func CreatePrimaryPartition(fdisk *FDISK, sizeBytes int)(string, error){
 
 func CreateExtendPartition(fdisk *FDISK, sizeBytes int)(string, error){
 	
-	var mbr MBR
+	var mbr structures.MBR
 	
 	msg, err := mbr.DeserializeMBR(fdisk.Path)
 	if err != nil {
@@ -158,7 +303,7 @@ func CreateExtendPartition(fdisk *FDISK, sizeBytes int)(string, error){
 
 
 func CreateLogicalPartition(fdisk *FDISK, sizeBytes int) (string, error) {
-	var mbr MBR
+	var mbr structures.MBR
 
 	msg, err := mbr.DeserializeMBR(fdisk.Path)
 	if err != nil {
@@ -166,7 +311,7 @@ func CreateLogicalPartition(fdisk *FDISK, sizeBytes int) (string, error) {
 	}
 
 	// Buscar la partición extendida
-	var extendedPartition *PARTITION
+	var extendedPartition *structures.PARTITION
 	for _, partition := range mbr.Mbr_partitions {
 		if partition.Part_type[0] == 'E' {
 			extendedPartition = &partition
@@ -227,7 +372,7 @@ func CreateLogicalPartition(fdisk *FDISK, sizeBytes int) (string, error) {
 		// Crear la partición lógica después del EBR (tomando en cuenta el tamaño del EBR)
 		logicalStart := extendedPartition.Part_start + int32(binary.Size(ebr))
 
-		var logicalPartition PARTITION
+		var logicalPartition structures.PARTITION
 		logicalPartition.CreatePartition(int(logicalStart), sizeBytes, fdisk.TypE, fdisk.Fit, fdisk.Name)
 		logicalPartition.Part_id = extendedPartition.Part_id
 
@@ -309,7 +454,7 @@ func CreateLogicalPartition(fdisk *FDISK, sizeBytes int) (string, error) {
 
 	// Crear la partición lógica después del nuevo EBR
 	logicalStart := newEBRStart + int32(binary.Size(ebr1))
-	var logicalPartition PARTITION
+	var logicalPartition structures.PARTITION
 	logicalPartition.CreatePartition(int(logicalStart), sizeBytes, fdisk.TypE, fdisk.Fit, fdisk.Name)
 	logicalPartition.Part_id = extendedPartition.Part_id
 
@@ -349,7 +494,7 @@ func CreateLogicalPartition(fdisk *FDISK, sizeBytes int) (string, error) {
 
 
 func PrintEBRs(fdisk *FDISK) (string, error) {
-	var mbr MBR
+	var mbr structures.MBR
 
 	// Deserializar el MBR
 	msg, err := mbr.DeserializeMBR(fdisk.Path)
@@ -358,7 +503,7 @@ func PrintEBRs(fdisk *FDISK) (string, error) {
 	}
 
 	// Buscar la partición extendida
-	var extendedPartition *PARTITION
+	var extendedPartition *structures.PARTITION
 	for _, partition := range mbr.Mbr_partitions {
 		if partition.Part_type[0] == 'E' {
 			extendedPartition = &partition

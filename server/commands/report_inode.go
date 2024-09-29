@@ -1,4 +1,4 @@
-package reports
+package commands
 
 import (
 	structures "server/structures"
