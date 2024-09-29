@@ -61,6 +61,26 @@ func UnmountPartition(id string) (string, error) {
 	return "", nil
 }
 
+func UnmountPartition1(nombre string)string{
+	for key:= range ParticionesMontadas {
+		if key == nombre {
+			delete(ParticionesMontadas, key)
+			break
+		}
+	}
+	return ""
+}
+
+
+func ObtenerParticion(nombre string)string{
+	for key, value := range ParticionesMontadas {
+		if key == nombre {
+			return value
+		}
+	}
+	return "P"
+}
+
 
 func GetMountedPartitionRep(id string) (*structures.MBR, *structures.SuperBlock, string, error) {
 	// Obtener el path de la partición montada
