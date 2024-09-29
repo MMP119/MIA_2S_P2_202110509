@@ -21,6 +21,7 @@ func ParserFdisk(tokens []string) (*FDISK, string, error) {
 	matches := re.FindAllString(args, -1)
 
 	var banderaDelete bool = false
+	var banderaAdd bool = false
 
 	for _, match := range matches {
 
@@ -90,7 +91,7 @@ func ParserFdisk(tokens []string) (*FDISK, string, error) {
 			cmd.Delete = value
 
 		case "-add":
-
+			banderaAdd = true
 			//verificar que sean números positivos o negativos
 			num, err := strconv.Atoi(value)
 			if err != nil {
@@ -105,7 +106,7 @@ func ParserFdisk(tokens []string) (*FDISK, string, error) {
 	}
 
 	// Verifica que los parámetros -size, -path y -name hayan sido proporcionados
-	if cmd.Size == 0 && !banderaDelete {
+	if cmd.Size == 0 && !banderaDelete && !banderaAdd {
 		return nil, "ERROR: faltan parámetros requeridos: -size", errors.New("faltan parámetros requeridos: -size")
 	}
 	if cmd.Path == "" {
@@ -133,10 +134,12 @@ func ParserFdisk(tokens []string) (*FDISK, string, error) {
 	}
 
 	if cmd.Add == 0 {
+		banderaAdd = false
 		cmd.Add = 0
 	}
 
 	banderaDelete = false
+	banderaAdd = false
 
 	msg, err := CommandFdisk(cmd)
 	if err != nil {

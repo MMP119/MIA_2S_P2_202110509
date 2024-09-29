@@ -56,6 +56,17 @@ func CommandFdisk(fdisk *FDISK) (string, error) {
 		return msg, nil
 	}
 
+
+	if(fdisk.Add != 0){
+		//tomar el valor del add, las unit
+		msg, err = AddRemovePartition(fdisk)
+		if err != nil {
+			fmt.Println("Error adding/removing space:", err)
+			return msg, err
+		}
+		return msg, nil	
+	}
+
 	// para crear la particion primaria
 	if(fdisk.TypE == "P"){
 		msg, err = CreatePrimaryPartition(fdisk, sizeBytes)
@@ -132,6 +143,8 @@ func DeleteFastPartition(fdisk *FDISK) (string, error) {
 
 	}else{
 
+		tipo := global.ObtenerParticion(fdisk.Name)
+
 		var mbr structures.MBR
 
 		msg, err := mbr.DeserializeMBR(fdisk.Path)
@@ -139,37 +152,106 @@ func DeleteFastPartition(fdisk *FDISK) (string, error) {
 			return msg, fmt.Errorf("error leyendo el MBR del disco: %s", err)
 		}
 
-		for i := range mbr.Mbr_partitions {
-			partition := &mbr.Mbr_partitions[i]
-			if strings.Trim(string(partition.Part_name[:]), "\x00") == fdisk.Name {
-				// Eliminar la partición
-				partition.Part_status = [1]byte{'2'}
-				partition.Part_type = [1]byte{'0'}
-				partition.Part_fit = [1]byte{'0'}
-				partition.Part_start = int32(-1)
-				partition.Part_size = int32(-1)
-				partition.Part_name = [16]byte{'0'}
-				partition.Part_correlative = int32(0)
-				partition.Part_id = [4]byte{'0'}
+		if tipo =="E"{
+			for i := range mbr.Mbr_partitions {
+				partition := &mbr.Mbr_partitions[i]
+				if strings.Trim(string(partition.Part_name[:]), "\x00") == fdisk.Name {
+					// Eliminar la partición
+					partition.Part_status = [1]byte{'2'}
+					partition.Part_type = [1]byte{'0'}
+					partition.Part_fit = [1]byte{'0'}
+					partition.Part_start = int32(-1)
+					partition.Part_size = int32(-1)
+					partition.Part_name = [16]byte{'0'}
+					partition.Part_correlative = int32(0)
+					partition.Part_id = [4]byte{'0'}
 
-				// Guardar los cambios en el disco
-				msg, err := mbr.SerializeMBR(fdisk.Path)
-				if err != nil {
-					return msg, fmt.Errorf("error escribiendo el MBR al disco: %s", err)
+					// Guardar los cambios en el disco
+					msg, err := mbr.SerializeMBR(fdisk.Path)
+					if err != nil {
+						return msg, fmt.Errorf("error escribiendo el MBR al disco: %s", err)
+					}
+					break
 				}
-				break
 			}
-		
+		}else{
+			//si es una particion logica
+			// Buscar la partición extendida y buscar dentro de ella la partición lógica
+			var extendedPartition *structures.PARTITION
+			for _, partition := range mbr.Mbr_partitions {
+				if partition.Part_type[0] == 'E' {
+					extendedPartition = &partition
+					break
+				}
+			}
+
+			if extendedPartition == nil {
+				return "No se encontró una partición extendida", nil
+			}
+
+			// Buscar la partición lógica
+			var ebr EBR
+			file, err := os.OpenFile(fdisk.Path, os.O_RDWR, 0644)
+			if err != nil {
+				return "Error al abrir el archivo del disco", err
+			}
+
+			_, err = file.Seek(int64(extendedPartition.Part_start), 0)
+			if err != nil {
+				return "Error al moverse al inicio de la partición extendida", err
+			}
+
+			err = binary.Read(file, binary.LittleEndian, &ebr)
+			if err != nil {
+				return "Error al leer el EBR", err
+			}
+
+			for ebr.Part_size != 0 {
+				if strings.Trim(string(ebr.Part_name[:]), "\x00") == fdisk.Name {
+					inicioParticion := ebr.Part_start
+					// Eliminar la partición
+					ebr.Part_mount = [1]byte{'2'}
+					ebr.Part_fit = [1]byte{'0'}
+					ebr.Part_start = int32(-1)
+					ebr.Part_size = int32(-1)
+					//ebr.Part_next = int32(-1)
+					ebr.Part_name = [16]byte{'0'}
+
+					// Guardar los cambios en el disco
+					_, err = file.Seek(int64(inicioParticion), 0)
+					if err != nil {
+						return "Error al moverse al inicio del EBR", err
+					}
+
+					err = binary.Write(file, binary.LittleEndian, &ebr)
+					if err != nil {
+						return "Error al escribir el EBR", err
+					}
+
+					break
+				}
+
+				if ebr.Part_next == -1 { 
+					break
+				}
+
+				_, err = file.Seek(int64(ebr.Part_next), 0)
+				if err != nil {
+					return "Error al moverse al siguiente EBR", err
+				}
+
+				err = binary.Read(file, binary.LittleEndian, &ebr)
+				if err != nil {
+					return "Error al leer el siguiente EBR", err
+				}
+			}
 		}
 
 		msg, err = mbr.SerializeMBR(fdisk.Path)
 		if err != nil {
 			return msg, fmt.Errorf("error al escribir el MBR: %s", err)
 		}
-
 		global.UnmountPartition1(fdisk.Name)
-
-
 	}
 
 	return "Partición eliminada exitosamente", nil
@@ -275,6 +357,8 @@ func DeleteFullPartition(fdisk *FDISK) (string, error) {
 
 	}else{
 
+		tipo := global.ObtenerParticion(fdisk.Name)
+
 		var mbr structures.MBR
 
 		msg, err := mbr.DeserializeMBR(fdisk.Path)
@@ -285,91 +369,354 @@ func DeleteFullPartition(fdisk *FDISK) (string, error) {
 		var start int32
 		var size int32
 
-		for i := range mbr.Mbr_partitions {
-			partition := &mbr.Mbr_partitions[i]
-			if strings.Trim(string(partition.Part_name[:]), "\x00") == fdisk.Name {
-				start = partition.Part_start
-				size = partition.Part_size
+		if tipo =="E"{	
+			for i := range mbr.Mbr_partitions {
+				partition := &mbr.Mbr_partitions[i]
+				if strings.Trim(string(partition.Part_name[:]), "\x00") == fdisk.Name {
+					start = partition.Part_start
+					size = partition.Part_size
 
-				// Eliminar la partición
-				partition.Part_status = [1]byte{'2'}
-				partition.Part_type = [1]byte{'0'}
-				partition.Part_fit = [1]byte{'0'}
-				partition.Part_start = int32(-1)
-				partition.Part_size = int32(-1)
-				partition.Part_name = [16]byte{'0'}
-				partition.Part_correlative = int32(0)
-				partition.Part_id = [4]byte{'0'}
+					// Eliminar la partición
+					partition.Part_status = [1]byte{'2'}
+					partition.Part_type = [1]byte{'0'}
+					partition.Part_fit = [1]byte{'0'}
+					partition.Part_start = int32(-1)
+					partition.Part_size = int32(-1)
+					partition.Part_name = [16]byte{'0'}
+					partition.Part_correlative = int32(0)
+					partition.Part_id = [4]byte{'0'}
 
-				// Guardar los cambios en el disco
-				msg, err := mbr.SerializeMBR(fdisk.Path)
-				if err != nil {
-					return msg, fmt.Errorf("error escribiendo el MBR al disco: %s", err)
+					// Guardar los cambios en el disco
+					msg, err := mbr.SerializeMBR(fdisk.Path)
+					if err != nil {
+						return msg, fmt.Errorf("error escribiendo el MBR al disco: %s", err)
+					}
+					break
 				}
-				break
+			
 			}
-		
+
+			msg, err = mbr.SerializeMBR(fdisk.Path)
+			if err != nil {
+				return msg, fmt.Errorf("error al escribir el MBR: %s", err)
+			}
+
+			global.UnmountPartition1(fdisk.Name)
+
+			// rellenar con \0 el espacio de la particion
+
+			msg, err = mbr.DeserializeMBR(fdisk.Path)
+			if err != nil {
+				return msg, fmt.Errorf("error leyendo el MBR del disco: %s", err)
+			}
+
+			file, err := os.OpenFile(fdisk.Path, os.O_RDWR, 0644)
+			if err != nil {
+				return "Error al abrir el archivo del disco", err
+			}
+			defer file.Close()
+
+			// Moverme al inicio de la partición
+			_, err = file.Seek(int64(start), 0)
+			if err != nil {
+				return "Error al moverse al inicio de la partición", err
+			}
+
+			// Rellenar el espacio de la partición con \0
+			emptyBytes := make([]byte, size)
+			for i := range emptyBytes {
+				emptyBytes[i] = 0
+			}
+
+			bytesWritten, err := file.Write(emptyBytes)
+			if err != nil {
+				return "Error al rellenar el espacio de la partición", err
+			}
+
+			if bytesWritten != len(emptyBytes) {
+				return fmt.Sprintf("Se esperaban escribir %d bytes pero solo se escribieron %d", len(emptyBytes), bytesWritten), nil
+			}
+
+			// Sincronizar los datos en el disco
+			err = file.Sync()
+			if err != nil {
+				return "Error al sincronizar los datos en el disco", err
+			}
+
+			// Ahora guardar el MBR
+			msg, err = mbr.SerializeMBR(fdisk.Path)
+			if err != nil {
+				return msg, fmt.Errorf("error escribiendo el MBR al disco: %s", err)
+			}
+		}else{
+			//si es una particion logica
+			// Buscar la partición extendida y buscar dentro de ella la partición lógica
+			var extendedPartition *structures.PARTITION
+			for _, partition := range mbr.Mbr_partitions {
+				if partition.Part_type[0] == 'E' {
+					extendedPartition = &partition
+					break
+				}
+			}
+
+			if extendedPartition == nil {
+				return "No se encontró una partición extendida", nil
+			}
+
+			// Buscar la partición lógica
+			var ebr EBR
+			file, err := os.OpenFile(fdisk.Path, os.O_RDWR, 0644)
+			if err != nil {
+				return "Error al abrir el archivo del disco", err
+			}
+
+			_, err = file.Seek(int64(extendedPartition.Part_start), 0)
+			if err != nil {
+				return "Error al moverse al inicio de la partición extendida", err
+			}
+
+			err = binary.Read(file, binary.LittleEndian, &ebr)
+			if err != nil {
+				return "Error al leer el EBR", err
+			}
+
+			for ebr.Part_size != 0 {
+				if strings.Trim(string(ebr.Part_name[:]), "\x00") == fdisk.Name {
+					startL := ebr.Part_start
+
+					// Eliminar la partición
+					ebr.Part_mount = [1]byte{'2'}
+					ebr.Part_fit = [1]byte{'0'}
+					ebr.Part_start = int32(-1)
+					ebr.Part_size = int32(-1)
+					//ebr.Part_next = int32(-1)
+					ebr.Part_name = [16]byte{'0'}
+
+					// Guardar los cambios en el disco
+					_, err = file.Seek(int64(startL), 0)
+					if err != nil {
+						return "Error al moverse al inicio del EBR", err
+					}
+
+					err = binary.Write(file, binary.LittleEndian, &ebr)
+					if err != nil {
+						return "Error al escribir el EBR", err
+					}
+
+					break
+				}
+
+				if ebr.Part_next == -1 { 
+					break
+				}
+
+				_, err = file.Seek(int64(ebr.Part_next), 0)
+				if err != nil {
+					return "Error al moverse al siguiente EBR", err
+				}
+
+				err = binary.Read(file, binary.LittleEndian, &ebr)
+				if err != nil {
+					return "Error al leer el siguiente EBR", err
+				}
+
+			}
+
+			msg, err = mbr.SerializeMBR(fdisk.Path)
+			if err != nil {
+				return msg, fmt.Errorf("error al escribir el MBR: %s", err)
+			}
+
+			global.UnmountPartition1(fdisk.Name)
 		}
-
-		msg, err = mbr.SerializeMBR(fdisk.Path)
-		if err != nil {
-			return msg, fmt.Errorf("error al escribir el MBR: %s", err)
-		}
-
-		global.UnmountPartition1(fdisk.Name)
-
-		// rellenar con \0 el espacio de la particion
-
-		msg, err = mbr.DeserializeMBR(fdisk.Path)
-		if err != nil {
-			return msg, fmt.Errorf("error leyendo el MBR del disco: %s", err)
-		}
-
-		file, err := os.OpenFile(fdisk.Path, os.O_RDWR, 0644)
-		if err != nil {
-			return "Error al abrir el archivo del disco", err
-		}
-		defer file.Close()
-
-		// Moverme al inicio de la partición
-		_, err = file.Seek(int64(start), 0)
-		if err != nil {
-			return "Error al moverse al inicio de la partición", err
-		}
-
-		// Rellenar el espacio de la partición con \0
-		emptyBytes := make([]byte, size)
-		for i := range emptyBytes {
-			emptyBytes[i] = 0
-		}
-
-		bytesWritten, err := file.Write(emptyBytes)
-		if err != nil {
-			return "Error al rellenar el espacio de la partición", err
-		}
-
-		if bytesWritten != len(emptyBytes) {
-			return fmt.Sprintf("Se esperaban escribir %d bytes pero solo se escribieron %d", len(emptyBytes), bytesWritten), nil
-		}
-
-		// Sincronizar los datos en el disco
-		err = file.Sync()
-		if err != nil {
-			return "Error al sincronizar los datos en el disco", err
-		}
-
-		// Ahora guardar el MBR
-		msg, err = mbr.SerializeMBR(fdisk.Path)
-		if err != nil {
-			return msg, fmt.Errorf("error escribiendo el MBR al disco: %s", err)
-		}
-
 	}
 
 	return "Partición eliminada exitosamente", nil
 
 }
 
+
+//funcion para agregar/quitar espacio a una particion
+func AddRemovePartition(fdisk *FDISK) (string, error) {
+
+	//verificar si es positivo o negativo
+	if fdisk.Add > 0 {//si es mayor a 0, agregar espacio a la particion
+
+		tipo := global.ObtenerParticion(fdisk.Name)
+
+		if tipo != "E" && tipo != "L" {
+			id := global.ParticionesMontadas[fdisk.Name]
+			mountedMbr, _, _, err := global.GetMountedPartitionRep(id) //retorna *structures.MBR, *structures.SuperBlock, string, error
+			if err != nil {
+				return "", err
+			}
+
+			for i := range mountedMbr.Mbr_partitions {
+				partition := &mountedMbr.Mbr_partitions[i] // Tomamos un puntero a la partición real
+				if strings.Trim(string(partition.Part_name[:]), "\x00") == fdisk.Name {
+					
+					//verificar que exista espacio libre despues de la particion
+					if partition.Part_start + partition.Part_size + int32(fdisk.Add) > mountedMbr.Mbr_size {
+						
+					}
+				}
+			}
+		}
+
+	}else{
+
+		//si es menor a 0, quitar espacio a la particion
+		fdisk.Add = fdisk.Add * -1 //convertir a positivo
+
+		//convertir a bytes el valor de add
+		sizeBytes, err := util.ConvertToBytes(fdisk.Add, fdisk.Unit)
+		if err != nil {
+			fmt.Println("Error converting size:", err)
+			return "Error converting size en Fdisk", err
+		}
+
+		tipo := global.ObtenerParticion(fdisk.Name)
+
+		if tipo != "E" && tipo != "L" {
+			id := global.ParticionesMontadas[fdisk.Name]
+			mountedMbr, _, mountedDiskPath, err := global.GetMountedPartitionRep(id) //retorna *structures.MBR, *structures.SuperBlock, string, error
+			if err != nil {
+				return "", err
+			}
+
+			for i := range mountedMbr.Mbr_partitions {
+				partition := &mountedMbr.Mbr_partitions[i] // Tomamos un puntero a la partición real
+				if strings.Trim(string(partition.Part_name[:]), "\x00") == fdisk.Name {
+					
+					//verificar que quede espacio en la particion (no espacio negativo)
+					if partition.Part_size - int32(sizeBytes) < 0 {
+						return "ERROR: No se puede quitar más espacio del que tiene la partición, el tamaño no puede ser negativo", fmt.Errorf("tamaño de la partición no puede ser negativo")
+					}
+					
+					//Quitar espacio a la partición
+					partition.Part_size -= int32(sizeBytes)
+
+					// Guardar los cambios en el disco
+					msg, err := mountedMbr.SerializeMBR(mountedDiskPath)
+					if err != nil {
+						return msg, fmt.Errorf("error escribiendo el MBR al disco: %s", err)
+					}
+					break
+				}
+			}
+
+		}else{
+
+			tipo := global.ObtenerParticion(fdisk.Name)
+
+			var mbr structures.MBR
+
+			msg, err := mbr.DeserializeMBR(fdisk.Path)
+			if err != nil {
+				return msg, fmt.Errorf("error leyendo el MBR del disco: %s", err)
+			}
+
+			if tipo =="E"{
+				for i := range mbr.Mbr_partitions {
+					partition := &mbr.Mbr_partitions[i]
+					if strings.Trim(string(partition.Part_name[:]), "\x00") == fdisk.Name {
+
+						//verificar que quede espacio en la particion (no espacio negativo)
+						if partition.Part_size - int32(sizeBytes) < 0 {
+							return "ERROR: No se puede quitar más espacio del que tiene la partición, el tamaño no puede ser negativo", fmt.Errorf("tamaño de la partición no puede ser negativo")
+						}
+						
+						//Quitar espacio a la partición
+						partition.Part_size -= int32(sizeBytes)
+
+						// Guardar los cambios en el disco
+						msg, err := mbr.SerializeMBR(fdisk.Path)
+						if err != nil {
+							return msg, fmt.Errorf("error escribiendo el MBR al disco: %s", err)
+						}
+						break
+					}
+				}
+			}else{
+				//si es una particion logica
+				// Buscar la partición extendida y buscar dentro de ella la partición lógica
+				var extendedPartition *structures.PARTITION
+				for _, partition := range mbr.Mbr_partitions {
+					if partition.Part_type[0] == 'E' {
+						extendedPartition = &partition
+						break
+					}
+				}
+
+				if extendedPartition == nil {
+					return "No se encontró una partición extendida", nil
+				}
+
+				// Buscar la partición lógica
+				var ebr EBR
+				file, err := os.OpenFile(fdisk.Path, os.O_RDWR, 0644)
+				if err != nil {
+					return "Error al abrir el archivo del disco", err
+				}
+
+				_, err = file.Seek(int64(extendedPartition.Part_start), 0)
+				if err != nil {
+					return "Error al moverse al inicio de la partición extendida", err
+				}
+
+				err = binary.Read(file, binary.LittleEndian, &ebr)
+				if err != nil {
+					return "Error al leer el EBR", err
+				}
+
+				for ebr.Part_size != 0 {
+					if strings.Trim(string(ebr.Part_name[:]), "\x00") == fdisk.Name {
+						//verificar que quede espacio en la particion (no espacio negativo)
+						if ebr.Part_size - int32(sizeBytes) < 0 {
+							return "ERROR: No se puede quitar más espacio del que tiene la partición, el tamaño no puede ser negativo", fmt.Errorf("tamaño de la partición no puede ser negativo")
+						}
+
+						//Quitar espacio a la partición
+						ebr.Part_size -= int32(sizeBytes)
+
+						// Guardar los cambios en el disco
+						_, err = file.Seek(int64(ebr.Part_start), 0)
+						if err != nil {
+							return "Error al moverse al inicio del EBR", err
+						}
+
+						err = binary.Write(file, binary.LittleEndian, &ebr)
+						if err != nil {
+							return "Error al escribir el EBR", err
+						}
+
+						break
+					}
+
+					if ebr.Part_next == -1 { 
+						break
+					}
+
+					_, err = file.Seek(int64(ebr.Part_next), 0)
+					if err != nil {
+						return "Error al moverse al siguiente EBR", err
+					}
+
+					err = binary.Read(file, binary.LittleEndian, &ebr)
+					if err != nil {
+						return "Error al leer el siguiente EBR", err
+					}
+				}
+				//guardar los cambios en el disco
+				msg, err := mbr.SerializeMBR(fdisk.Path)
+				if err != nil {
+					return msg, fmt.Errorf("error escribiendo el MBR al disco: %s", err)
+				}
+			}
+		}
+	}
+	return "Parámetro add realizado exitosamente", nil
+}
 
 
 func CreatePrimaryPartition(fdisk *FDISK, sizeBytes int)(string, error){
