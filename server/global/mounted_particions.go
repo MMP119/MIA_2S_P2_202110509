@@ -2,6 +2,7 @@ package global
 
 import (
 	"errors"
+	"fmt"
 	structures "server/structures"
 )
 
@@ -46,17 +47,12 @@ func GetMountedPartition(id string) (*structures.PARTITION, string, error) {
 
 //funcion para desmontar una particion
 func UnmountPartition(id string) (string, error) {
-
 	// Eliminar la partición montada de la lista de particiones montadas
+	fmt.Println("Desmontando particion con id: " + id)
+	fmt.Println(MountedPartitions)
 	delete(MountedPartitions, id)
-
-	//map[Particion1:091A Particion2:092A], eliminar la particion si encuentra el id
-	for key, value := range ParticionesMontadas {
-		if value == id {
-			delete(ParticionesMontadas, key)
-			break
-		}
-	}
+	fmt.Println("---------------------")
+	fmt.Println(MountedPartitions)
 
 	return "", nil
 }

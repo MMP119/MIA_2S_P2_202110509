@@ -811,6 +811,7 @@ cat -file1=/home/user/usac/doc/a.txt -file2=/home/user/usac/b.txt
 rep -id=091A -path="/home/mario/Escritorio/GitHub/MIA_2S_P2_202110509/server/output/mbr1.png" -name=mbr
 
 fdisk -add=1 -unit=M -name="Particion2" -path="/home/mario/Escritorio/GitHub/MIA_2S_P2_202110509/server/disks/Disco1.mia"
+unmount -id=092A
 
 rep -id=091A -path="/home/mario/Escritorio/GitHub/MIA_2S_P2_202110509/server/output/disco1.png" -name=disk
 rep -id=091A -path="/home/mario/Escritorio/GitHub/MIA_2S_P2_202110509/server/output/inode1.png" -name=inode
