@@ -71,6 +71,8 @@ func Analyzer(inputs []string) ([]string, []string) {
             _, msg, err = commands.ParseChgrp(tokens[1:])
         case "unmount":
             _, msg, err = commands.ParseUnmount(tokens[1:])
+        case "remove":
+            _, msg, err = commands.ParseRemove(tokens[1:])
         case "clear":
             cmd := exec.Command("clear")
             cmd.Stdout = os.Stdout

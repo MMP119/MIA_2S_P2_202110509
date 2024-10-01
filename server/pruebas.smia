@@ -822,3 +822,35 @@ rep -id=091A -path="/home/mario/Escritorio/GitHub/MIA_2S_P2_202110509/server/out
 rep -id=091A -path="/home/mario/Escritorio/GitHub/MIA_2S_P2_202110509/server/output/fileB.txt" -path_file_ls=/home/user/usac/b.txt -name=file
 
 logout
+
+
+
+mkdisk -size=20 -unit=M -fit=FF -path="/home/mario/Escritorio/GitHub/MIA_2S_P2_202110509/server/disks/Disco1.mia"
+fdisk -size=2 -type=P -unit=M -fit=FF -name="Particion1" -path="/home/mario/Escritorio/GitHub/MIA_2S_P2_202110509/server/disks/Disco1.mia"
+mount -name="Particion1" -path="/home/mario/Escritorio/GitHub/MIA_2S_P2_202110509/server/disks/Disco1.mia"
+mkfs -id=091A -type=full
+login -user=root -pass=123 -id=091A
+mkdir -path=/home
+mkdir -path=/home/usac
+mkdir -path=/home/doc
+remove -Path=/home/usac
+
+
+
+
+
+
+mkdisk -size=20 -unit=M -fit=FF -path="/home/mario/Escritorio/GitHub/MIA_2S_P2_202110509/server/disks/Disco1.mia"
+fdisk -size=2 -type=P -unit=M -fit=FF -name="Particion1" -path="/home/mario/Escritorio/GitHub/MIA_2S_P2_202110509/server/disks/Disco1.mia"
+mount -name="Particion1" -path="/home/mario/Escritorio/GitHub/MIA_2S_P2_202110509/server/disks/Disco1.mia"
+mkfs -id=091A -type=full
+login -user=root -pass=123 -id=091A
+mkdir -path=/home
+mkdir -path=/home/usac
+mkdir -path=/home/usac/docu
+mkdir -path=/home/usac/docu/MIA
+mkfile -size=15 -path=/home/usac/docu/MIA/a.txt
+
+mkdir -path=/home/doc
+mkdir -path=/home/doc/mario
+remove -Path=/home/usac/docu/MIA/a.txt
