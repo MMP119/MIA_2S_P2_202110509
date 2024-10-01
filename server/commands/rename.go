@@ -4,30 +4,30 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"server/global"
+	global "server/global"
+	structures "server/structures"
 	utils "server/util"
 	"strings"
-	structures "server/structures"
 )
 
 
-type REMOVE struct{
+type RENAME struct{
 	Path string
+	Name string
 }
 
 
-func ParseRemove(tokens []string)(*REMOVE, string, error){
+func ParseRename(tokens []string) (*RENAME, string, error) {
 
-	cmd := &REMOVE{}
+	cmd := &RENAME{}
 
 	args := strings.Join(tokens, " ")
 
-	re := regexp.MustCompile(`(?i)-path="[^"]+"|(?i)-path=[^\s]+`)
+	re := regexp.MustCompile(`(?i)-path="[^"]+"|(?i)-path=[^\s]+|(?i)-name="[^"]+"|(?i)-name=[^\s]+`)
 
 	matches := re.FindAllString(args, -1)
 
-	for _, math := range matches{
-
+	for _, math := range matches {
 		kv := strings.SplitN(math, "=", 2)
 		if len(kv) != 2 {
 			return nil, "ERROR: formato de parámetro inválido", fmt.Errorf("formato de parámetro inválido: %s", math)
@@ -46,6 +46,12 @@ func ParseRemove(tokens []string)(*REMOVE, string, error){
 					return nil, "ERROR: el path es obligatorio", errors.New("el path es obligatorio")
 				}
 				cmd.Path = value
+			
+			case "-name":
+				if value == "" {
+					return nil, "ERROR: name es obligatorio", errors.New("el contenido es obligatorio")
+				}
+				cmd.Name = value
 
 			default: 
 				return nil, "ERROR: parámetro no reconocido", fmt.Errorf("parámetro no reconocido: %s", key)
@@ -54,18 +60,22 @@ func ParseRemove(tokens []string)(*REMOVE, string, error){
 
 	if cmd.Path == "" {
 		return nil, "ERROR: el path es obligatorio", errors.New("el path es obligatorio")
+	}	
+
+	if cmd.Name == "" {
+		return nil, "ERROR: name es obligatorio", errors.New("el contenido es obligatorio")
 	}
 
-	msg, err := CommnadRemove(cmd)
+	msg, err := CommandRename(cmd)
 	if err != nil {
 		return nil, msg, err
 	}
 
-	return cmd, "Comando REMOVE: realizado correctamente", nil
+	return cmd, msg, nil
 }
 
 
-func CommnadRemove(cmd *REMOVE)(string, error){
+func CommandRename(cmd *RENAME) (string, error) {
 
 	parentDirs, destDir := utils.GetParentDirectories(cmd.Path)
 	
@@ -99,18 +109,26 @@ func CommnadRemove(cmd *REMOVE)(string, error){
 
 						if strings.Trim(string(content.B_name[:]), "\x00") == parentDirs[i] {
 							//recorro hasta llegar a la carpeta destino
-							RemoveRecursiva(inode, partitionSuperblock, partitionPath, parentDirs, destDir)
-							return "Comando REMOVE: realizado correctamente", nil
+							err := RenameRecursiva(inode, partitionSuperblock, partitionPath, parentDirs, destDir, cmd.Name)
+							if err != nil {
+								return "Error: no se pudo renombrar la carpeta", err
+							}
+							return "Comando RENAME: realizado correctamente", nil
 						}
 					}
 
 					if strings.Trim(string(content.B_name[:]), "\x00") == destDir {
 
+						if len(cmd.Name) > 12 {
+							return "Error: el nombre es mayor a 12 bytes", fmt.Errorf("el nombre '%s' es mayor a 12 bytes", cmd.Name)
+						}
+
 						contenido := &FolderBlock.B_content[i]
 
-						//eliminar la carpeta con todos sus archivos y subcarpetas
-						contenido.B_inodo = -1
-						contenido.B_name = [12]byte{'-'}
+						var nameArray [12]byte
+						copy(nameArray[:], cmd.Name)
+						//contenido.B_name = nameArray
+						copy(contenido.B_name[:], nameArray[:])
 
 						err = FolderBlock.Serialize(partitionPath, int64(partitionSuperblock.S_block_start+(block*partitionSuperblock.S_block_size)))
 						if err != nil {
@@ -123,11 +141,11 @@ func CommnadRemove(cmd *REMOVE)(string, error){
 		}
 	}
 
-	return "Comando REMOVE: realizado correctamente", nil
+	return "Comando RENAME: realizado correctamente", nil
 }
 
 
-func RemoveRecursiva(inode *structures.Inode, partitionSuperblock *structures.SuperBlock, partitionPath string, parentDirs []string, destDir string)(error){
+func RenameRecursiva(inode *structures.Inode, partitionSuperblock *structures.SuperBlock, partitionPath string, parentDirs []string, destDir string, Name string)(error){
 
 	FolderBlock := &structures.FolderBlock{}
 
@@ -153,17 +171,22 @@ func RemoveRecursiva(inode *structures.Inode, partitionSuperblock *structures.Su
 							}
 
 							//llamar a la funcion recursiva
-							RemoveRecursiva(inode, partitionSuperblock, partitionPath, parentDirs, destDir)
+							RenameRecursiva(inode, partitionSuperblock, partitionPath, parentDirs, destDir, Name)
 							return nil
 						}
 					}
 					if strings.Trim(string(content.B_name[:]), "\x00") == destDir {
 
+						if len(Name) > 12 {
+							return fmt.Errorf("el nombre '%s' es mayor a 12 bytes", Name)
+						}
+
 						contenido := &FolderBlock.B_content[i]
 
-						//eliminar la carpeta con todos sus archivos y subcarpetas
-						contenido.B_inodo = -1
-						contenido.B_name = [12]byte{'-'}
+						var nameArray [12]byte
+						copy(nameArray[:], Name)
+						//contenido.B_name = nameArray
+						copy(contenido.B_name[:], nameArray[:])
 
 						err = FolderBlock.Serialize(partitionPath, int64(partitionSuperblock.S_block_start+(block*partitionSuperblock.S_block_size)))
 						if err != nil {
