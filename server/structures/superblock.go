@@ -129,6 +129,24 @@ func (sb *SuperBlock) CreateFile(path string, parentsDir []string, destFile stri
 }
 
 
+func (sb *SuperBlock) EditeFile(path string, parentsDir []string, destFile string, size int, cont []string) error {
+
+	// Si parentsDir está vacío, solo trabajar con el primer inodo que sería el raíz "/"
+	if len(parentsDir) == 0 {
+		return sb.editFileInInode(path, 0, parentsDir, destFile, size, cont)
+	}
+
+	// Iterar sobre cada inodo ya que se necesita buscar el inodo padre
+	for i := int32(0); i < sb.S_inodes_count; i++ {
+		err := sb.editFileInInode(path, i, parentsDir, destFile, size, cont)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // PrintSuperBlock imprime los valores de la estructura SuperBlock
 func (sb *SuperBlock) Print() {
 	// Convertir el tiempo de montaje a una fecha

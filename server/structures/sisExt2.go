@@ -482,3 +482,143 @@ func (sb *SuperBlock) createFileInInode(path string, inodeIndex int32, parentsDi
 	}
 	return nil
 }
+
+
+// editFileInInode edita el contenido de un archivo existente en un inodo específico.
+func (sb *SuperBlock) editFileInInode(path string, inodeIndex int32, parentsDir []string, destFile string, fileSize int, newFileContent []string) error {
+    // Crear un nuevo inodo
+    inode := &Inode{}
+    // Deserializar el inodo
+    err := inode.Deserialize(path, int64(sb.S_inode_start+(inodeIndex*sb.S_inode_size)))
+    if err != nil {
+        return err
+    }
+
+    // Verificar si el inodo es de tipo carpeta
+    if inode.I_type[0] == '1' {
+        return nil
+    }
+
+    // Iterar sobre cada bloque del inodo (apuntadores)
+    for _, blockIndex := range inode.I_block {
+        // Si el bloque no existe, salir
+        if blockIndex == -1 {
+            break
+        }
+
+        // Crear un nuevo bloque de carpeta
+        block := &FolderBlock{}
+
+        // Deserializar el bloque
+        err := block.Deserialize(path, int64(sb.S_block_start+(blockIndex*sb.S_block_size))) // 64 porque es el tamaño de un bloque
+        if err != nil {
+            return err
+        }
+
+        // Iterar sobre cada contenido del bloque, desde el index 2 porque los primeros dos son . y ..
+        for indexContent := 2; indexContent < len(block.B_content); indexContent++ {
+            // Obtener el contenido del bloque
+            content := block.B_content[indexContent]
+
+            // Si tenemos carpetas padres, debemos buscarlas
+            if len(parentsDir) != 0 {
+                // Si el contenido está vacío, salir
+                if content.B_inodo == -1 {
+                    break
+                }
+
+                // Obtener la carpeta padre más cercana
+                parentDir, err := utils.First(parentsDir)
+                if err != nil {
+                    return err
+                }
+
+                // Convertir nombres y compararlos
+                contentName := strings.Trim(string(content.B_name[:]), "\x00 ")
+                parentDirName := strings.Trim(parentDir, "\x00 ")
+                if strings.EqualFold(contentName, parentDirName) {
+                    // Si encontramos el directorio correcto, llamamos recursivamente
+                    err := sb.editFileInInode(path, content.B_inodo, utils.RemoveElement(parentsDir, 0), destFile, fileSize, newFileContent)
+                    if err != nil {
+                        return err
+                    }
+                    return nil
+                }
+            } else {
+                // Si no hay más carpetas padres, buscar el archivo destino
+                contentName := strings.Trim(string(content.B_name[:]), "\x00 ")
+                if strings.EqualFold(contentName, destFile) {
+                    // Aquí es donde editamos el archivo específico
+                    return sb.editFileBlocks(path, content.B_inodo, fileSize, newFileContent)
+                }
+            }
+        }
+    }
+    return nil
+}
+
+// Función auxiliar para editar los bloques de un archivo
+func (sb *SuperBlock) editFileBlocks(path string, inodeIndex int32, fileSize int, newFileContent []string) error {
+    inode := &Inode{}
+    err := inode.Deserialize(path, int64(sb.S_inode_start+(inodeIndex*sb.S_inode_size)))
+    if err != nil {
+        return err
+    }
+
+    contentIndex := 0
+    for _, blockIndex := range inode.I_block {
+        if blockIndex == -1 {
+            break
+        }
+
+        fileBlock := &FileBlock{}
+        err := fileBlock.Deserialize(path, int64(sb.S_block_start+(blockIndex*sb.S_block_size)))
+        if err != nil {
+            return err
+        }
+
+        if contentIndex < len(newFileContent) {
+            copy(fileBlock.B_content[:], newFileContent[contentIndex])
+            err = fileBlock.Serialize(path, int64(sb.S_block_start+(blockIndex*sb.S_block_size)))
+            if err != nil {
+                return err
+            }
+            contentIndex++
+        }
+    }
+
+    for contentIndex < len(newFileContent) {
+        if contentIndex >= len(inode.I_block) {
+            return nil
+        }
+
+        if inode.I_block[contentIndex] == -1 {
+            newBlockIndex := sb.S_blocks_count
+            inode.I_block[contentIndex] = newBlockIndex
+
+            fileBlock := &FileBlock{}
+            copy(fileBlock.B_content[:], newFileContent[contentIndex])
+
+            err = fileBlock.Serialize(path, int64(sb.S_block_start+(newBlockIndex*sb.S_block_size)))
+            if err != nil {
+                return err
+            }
+
+            err = sb.UpdateBitmapBlock(path)
+            if err != nil {
+                return err
+            }
+            sb.S_blocks_count++
+            sb.S_free_blocks_count--
+            contentIndex++
+        }
+    }
+
+    inode.I_size = int32(fileSize)
+    err = inode.Serialize(path, int64(sb.S_inode_start+(inodeIndex*sb.S_inode_size)))
+    if err != nil {
+        return err
+    }
+
+    return nil
+}
