@@ -864,7 +864,7 @@ mkdir -path=/home/doc/mario
 mkdisk -size=20 -unit=M -fit=FF -path="/home/mario/Escritorio/GitHub/MIA_2S_P2_202110509/server/disks/Disco1.mia"
 fdisk -size=2 -type=P -unit=M -fit=FF -name="Particion1" -path="/home/mario/Escritorio/GitHub/MIA_2S_P2_202110509/server/disks/Disco1.mia"
 mount -name="Particion1" -path="/home/mario/Escritorio/GitHub/MIA_2S_P2_202110509/server/disks/Disco1.mia"
-mkfs -id=091A -type=full
+mkfs -id=091A -type=full -fs=3fs
 login -user=root -pass=123 -id=091A
 mkdir -path=/home
 mkdir -path=/home/usac
@@ -882,3 +882,34 @@ rep -id=091A -path="/home/mario/Escritorio/GitHub/MIA_2S_P2_202110509/server/out
 
 
 #remove -Path=/home/usac/docu/MIA/a.txt
+
+
+
+
+
+
+
+
+
+
+
+mkdisk -size=5 -unit=K -fit=WF -path="/home/mario/Escritorio/GitHub/MIA_2S_P2_202110509/server/disks/Disco1.mia"
+
+fdisk -size=2 -type=P -unit=K -fit=BF -name="Particion1" -path="/home/mario/Escritorio/GitHub/MIA_2S_P2_202110509/server/disks/Disco1.mia"
+
+mount -name="Particion1" -path="/home/mario/Escritorio/GitHub/MIA_2S_P2_202110509/server/disks/Disco1.mia"
+
+mkfs -id=091A -fs=3fs
+
+
+
+
+
+
+
+
+
+1:25
+al crear un mkdir, en crear directorio a la hora de crear, 
+en crearteFolder, lo que ahora sería crear en folderEXT3 o si NO
+sigue normal
