@@ -622,3 +622,14 @@ func (sb *SuperBlock) editFileBlocks(path string, inodeIndex int32, fileSize int
 
     return nil
 }
+
+
+// funcion para copiar una carpeta y su contenido a otro destino
+func (sb *SuperBlock) CopyFolder(path string, source string, destination string) error {
+
+	
+
+
+
+	return nil
+}

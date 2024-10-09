@@ -77,6 +77,10 @@ func Analyzer(inputs []string) ([]string, []string) {
             _, msg, err = commands.ParseEdit(tokens[1:])
         case "rename":
             _, msg, err = commands.ParseRename(tokens[1:])
+        case "copy":
+            _, msg, err = commands.ParseCopy(tokens[1:])
+        case "move":
+            _, msg, err = commands.ParseMove(tokens[1:])
         case "clear":
             cmd := exec.Command("clear")
             cmd.Stdout = os.Stdout
