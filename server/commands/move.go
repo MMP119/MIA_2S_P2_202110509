@@ -133,7 +133,7 @@ func CommandMove(cmd *MOVE)(string, error){
 
 						if strings.Trim(string(content.B_name[:]), "\x00") == parenDirsPath[i] {
 							//recorro hasta llegar a la carpeta destino
-							err := moveRecursiva(inode, partitionSuperblock, partitionPath, parenDirsPath, destiDirPath, parenDirsDestino, destiDirDestino)
+							err := moveRecursiva(inode, partitionSuperblock, partitionPath, parenDirsPath, destiDirPath, parenDirsDestino, destiDirDestino, textPath)
 							if err != nil {
 								return "Error: no se pudo renombrar la carpeta", err
 							}
@@ -146,7 +146,14 @@ func CommandMove(cmd *MOVE)(string, error){
 						contenido := &FolderBlock.B_content[i]
 						
 						//cambiar las referencias del inodo path, dejarlo en -1 y mover esa referencia al inodo destino	
-						refInodo := contenido.B_inodo //el * es para obtener el valor de la referencia
+						refInodo := int32(0)
+						nombre := ""
+						if textPath{
+							nombre = strings.Trim(string(content.B_name[:]), "\x00")
+							refInodo = contenido.B_inodo
+						}else{
+							refInodo = contenido.B_inodo 
+						}
 						contenido.B_inodo = -1 //cambiar la referencia del inodo path a -1
 						
 						//irse a la funcion que recorre los inodos y cambia las referencias del inodo destino
@@ -155,7 +162,7 @@ func CommandMove(cmd *MOVE)(string, error){
 						if err != nil {
 							return "no se pudo deserializar el inodo", err
 						}
-						err = MoverDestino(inode1, partitionSuperblock, partitionPath, parenDirsDestino, destiDirDestino, refInodo)
+						err = MoverDestino(inode1, partitionSuperblock, partitionPath, parenDirsDestino, destiDirDestino, refInodo, textPath, nombre)
 						if err != nil {
 							return "Error: no se pudo mover la carpeta", err
 						}
@@ -176,7 +183,7 @@ func CommandMove(cmd *MOVE)(string, error){
 }
 
 
-func moveRecursiva(inode *structures.Inode, partitionSuperblock *structures.SuperBlock, partitionPath string, parentDirs []string, destDir string, parentDirsDestino []string, destiDirDestino string)(error){
+func moveRecursiva(inode *structures.Inode, partitionSuperblock *structures.SuperBlock, partitionPath string, parentDirs []string, destDir string, parentDirsDestino []string, destiDirDestino string, textPath bool)(error){
 
 	FolderBlock := &structures.FolderBlock{}
 
@@ -202,7 +209,7 @@ func moveRecursiva(inode *structures.Inode, partitionSuperblock *structures.Supe
 							}
 
 							//llamar a la funcion recursiva
-							moveRecursiva(inode, partitionSuperblock, partitionPath, parentDirs, destDir, parentDirsDestino, destiDirDestino)
+							moveRecursiva(inode, partitionSuperblock, partitionPath, parentDirs, destDir, parentDirsDestino, destiDirDestino, textPath)
 							return nil
 						}
 					}
@@ -210,8 +217,14 @@ func moveRecursiva(inode *structures.Inode, partitionSuperblock *structures.Supe
 
 						contenido := &FolderBlock.B_content[i]
 						
-						//cambiar las referencias del inodo path, dejarlo en -1 y mover esa referencia al inodo destino	
-						refInodo := contenido.B_inodo //el * es para obtener el valor de la referencia
+						refInodo := int32(0)
+						nombre := ""
+						if textPath{
+							nombre = strings.Trim(string(content.B_name[:]), "\x00")
+							refInodo = contenido.B_inodo
+						}else{
+							refInodo = contenido.B_inodo 
+						}
 						contenido.B_inodo = -1 //cambiar la referencia del inodo path a -1
 						
 						//irse a la funcion que recorre los inodos y cambia las referencias del inodo destino
@@ -222,7 +235,7 @@ func moveRecursiva(inode *structures.Inode, partitionSuperblock *structures.Supe
 							return err
 						}
 						
-						err = MoverDestino(inode1, partitionSuperblock, partitionPath, parentDirsDestino, destiDirDestino, refInodo)
+						err = MoverDestino(inode1, partitionSuperblock, partitionPath, parentDirsDestino, destiDirDestino, refInodo, textPath, nombre)
 						if err != nil {
 							return err
 						}
@@ -241,7 +254,7 @@ func moveRecursiva(inode *structures.Inode, partitionSuperblock *structures.Supe
 }
 
 
-func MoverDestino(inode *structures.Inode, partitionSuperblock *structures.SuperBlock, partitionPath string, parentDirs []string, destDir string, refCambiar int32)(error){
+func MoverDestino(inode *structures.Inode, partitionSuperblock *structures.SuperBlock, partitionPath string, parentDirs []string, destDir string, refCambiar int32, textPath bool, nombre string)(error){
 
 
 	FolderBlock := &structures.FolderBlock{}
@@ -269,7 +282,7 @@ func MoverDestino(inode *structures.Inode, partitionSuperblock *structures.Super
 							}
 
 							//llamar a la funcion recursiva
-							err = MoverDestino(inode, partitionSuperblock, partitionPath, parentDirs, destDir, refCambiar)
+							err = MoverDestino(inode, partitionSuperblock, partitionPath, parentDirs, destDir, refCambiar, textPath, nombre)
 							if err != nil {
 								return err
 							}
@@ -279,9 +292,51 @@ func MoverDestino(inode *structures.Inode, partitionSuperblock *structures.Super
 
 						contenido := &FolderBlock.B_content[i]
 						
-						//cambiar las referencias del inodo path, dejarlo en -1 y mover esa referencia al inodo destino	
-						//refInodo := contenido.B_inodo //el * es para obtener el valor de la referencia
-						contenido.B_inodo = refCambiar //cambiar la referencia del inodo path a -1
+						if textPath{
+
+							//moverme al B_inodo que apunta el contenido
+							inode1 := &structures.Inode{}
+							err = inode1.Deserialize(partitionPath, int64(partitionSuperblock.S_inode_start+(contenido.B_inodo*partitionSuperblock.S_inode_size)))
+							if err != nil {
+								return err
+							}
+
+							//recorrer los bloques de la carpeta destino
+							FolderBlock1 := &structures.FolderBlock{}
+							for _, block1 := range inode1.I_block{
+								if block1 != -1{
+									err := FolderBlock1.Deserialize(partitionPath, int64(partitionSuperblock.S_block_start+(block1*partitionSuperblock.S_block_size)))
+									if err != nil {
+										return err
+									}
+
+									for i, content1 := range FolderBlock1.B_content{
+
+										if strings.Trim(string(content1.B_name[:]), "\x00") != "." && strings.Trim(string(content1.B_name[:]), "\x00") != ".."{
+											
+											if content1.B_inodo == -1{
+												contenido2 := &FolderBlock1.B_content[i]
+												
+												var nameArray [12]byte
+												copy(nameArray[:], []byte(nombre))
+												//contenido.B_name = nameArray
+												copy(contenido2.B_name[:], nameArray[:])
+												contenido2.B_inodo = refCambiar
+
+												err = FolderBlock1.Serialize(partitionPath, int64(partitionSuperblock.S_block_start+(block1*partitionSuperblock.S_block_size)))
+												if err != nil {
+													return err
+												}
+												break
+											}
+										}
+									}
+								}
+							}
+							
+						}else{
+							contenido.B_inodo = refCambiar //cambiar la referencia del inodo path a -1
+						}
 						
 						err = FolderBlock.Serialize(partitionPath, int64(partitionSuperblock.S_block_start+(block*partitionSuperblock.S_block_size)))
 						if err != nil {

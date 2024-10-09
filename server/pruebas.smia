@@ -874,17 +874,14 @@ mkdir -path=/home/doc
 mkdir -path=/home/doc/mario
 mkfile -size=15 -path=/home/usac/docu/MIA/a.txt
 
-#mover /docu a /doc
-move -path=/home/usac/docu -destino=/home/doc/mario
+move -path=/home/usac/docu/MIA/a.txt -destino=/home/doc/mario
+
+rename -path=/home/doc/mario/a.txt -name=b1.txt
+
+rep -id=091A -path="/home/mario/Escritorio/GitHub/MIA_2S_P2_202110509/server/output/fileB.txt" -path_file_ls=/home/doc/mario/b1.txt -name=file
 
 
 #rep -id=091A -path="/home/mario/Escritorio/GitHub/MIA_2S_P2_202110509/server/output/fileA.txt" -path_file_ls=/home/usac/docu/MIA/a.txt -name=file
-
-#rename -path=/home/usac/docu/MIA/a.txt -name=b1.txt
-
-#rep -id=091A -path="/home/mario/Escritorio/GitHub/MIA_2S_P2_202110509/server/output/fileB.txt" -path_file_ls=/home/usac/docu/MIA/b1.txt -name=file
-
-
 #remove -Path=/home/usac/docu/MIA/a.txt
 
 
