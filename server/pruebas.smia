@@ -874,7 +874,7 @@ mkdir -path=/home/doc
 mkdir -path=/home/doc/mario
 mkfile -size=15 -path=/home/usac/docu/MIA/a.txt
 
-move -path=/home/usac/docu/MIA/a.txt -destino=/home/doc/mario
+copy -path=/home/usac/docu/MIA/a.txt -destino=/home/doc/mario
 
 rename -path=/home/doc/mario/a.txt -name=b1.txt
 
@@ -888,6 +888,8 @@ rep -id=091A -path="/home/mario/Escritorio/GitHub/MIA_2S_P2_202110509/server/out
 
 
 
+
+#copy -path=/home/usac/docu -destino=/home/doc/mario
 
 
 
