@@ -6,6 +6,7 @@ import Login from './components/login/login.jsx';
 import VisualDiscos from './components/discos/disks/discos.jsx';
 import PartitionVisual from './components/discos/partitions/partitions.jsx'
 import ArchivosVisualizador from './components/discos/archivos/archivos.jsx';
+import TerminalUsuario from './components/terminalUsuario/terminalUsuario.jsx';
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -17,6 +18,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path='/visualDiscos' element={<VisualDiscos />} />
         <Route path='/visualPartitions' element={<PartitionVisual />} />
         <Route path='/visualArchivos' element={<ArchivosVisualizador />} />
+        <Route path='/terminalUsuario' element={<TerminalUsuario />} />
       </Routes>
     </Router>
   </React.StrictMode>,

@@ -1,6 +1,6 @@
 // eslint-disable-next-line no-unused-vars
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // Para redireccionar a la vista de particiones
+import { useNavigate, Link } from 'react-router-dom'; // Para redireccionar a la vista de particiones
 import './discos.css';
 
 const DiscosVisualizador = () => {
@@ -56,7 +56,9 @@ const DiscosVisualizador = () => {
         <div className='discos'>
             <div className='discos-container'>
                 <h1>Visualizador del Sistema de Archivos</h1>
-                <p>Seleccione el disco que desea visualizar:</p>
+                <p>Seleccione el disco que desea visualizar o ingresar a la  
+                    <Link to={`/terminalUsuario?diskID=${diskID}`}> terminal</Link> del usuario logueado
+                </p>
                 <br></br>
                 <br></br>
                 <div className="discos-grid">
