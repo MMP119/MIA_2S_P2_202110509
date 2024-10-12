@@ -4,6 +4,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 import './terminalUsuario.css';
 
+//SE DEBE USAR EL IGUALMENTE EL COMANDO LOGIN CON EL USUARIO Y CONTRASEÑA DENTRO DE ESTA CONSOLA, dio pereza
+//pasar contraseñas y estar revisando, hacer el proceso inverso básicamente...
+
 function App() {
   const codeInputRef = useRef(null);
   const consoleOutputRef = useRef(null);
@@ -120,8 +123,49 @@ function App() {
       consoleEditorRef.current.setValue('');
     };
 
-    const closeSession = () => {
+    const closeSession = async() => {
+
+      const commands = ['logout'];
+      let output = '';
+
+      for (const command of commands) {
+
+        try{
+          const response = await fetch('http://localhost:8080/analyze', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify([command]), // Envía el comando individualmente
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            output += `Error del servidor: ${errorText}\n`;
+            continue; // Salta el procesamiento de este comando si hay error
+          }
+
+          const data = await response.json();
+
+          // Agrega los resultados del comando al output
+          if (data.results && typeof data.results === 'object') {
+            output += `${Object.values(data.results).join('\n')}\n`;
+          }
+
+          // Agrega los errores del comando al output
+          if (data.errors && typeof data.errors === 'object') {
+            output += `${Object.values(data.errors).map(e => `Error - ${e}`).join('\n')}\n`;
+          }
+
+        }catch(error){
+            output += 'Error al conectar con el servidor.\n';
+            console.error('Error:', error);
+        }
+      }
+
+      consoleEditorRef.current.setValue(output || 'No hay salida');
       navigate(`/visualDiscos?diskID=${diskID}`); 
+
     };
 
     openButton.addEventListener('click', openFile);
