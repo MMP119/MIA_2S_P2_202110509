@@ -2,7 +2,22 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    flex-direction: column;
+}
+
+.back-button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #5a5aff;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin-left: auto; /* Empuja hacia la derecha */
+    margin-right: 94px; /* Espacio desde el borde derecho */
 }
 
 .discos-container {

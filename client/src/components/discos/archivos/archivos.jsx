@@ -9,7 +9,7 @@ const ArchivosVisualizador = () => {
 
     const[archivo, setArchivos] = useState([]); // Almacena los archivos de la carpeta
     const[loading, setLoading] = useState(true); // Para manejar el estado de carga
-    //const navigate = useNavigate(); // Hook para redireccionar
+    const navigate = useNavigate(); // Hook para redireccionar
     // eslint-disable-next-line no-unused-vars
     const [ruta, setRuta] = useState("");
 
@@ -22,7 +22,7 @@ const ArchivosVisualizador = () => {
     useEffect(() => {
         const fetchArchivos = async () => {
             try {
-                const response = await fetch('http://localhost:8080/archivosCarpetas', {
+                const response = await fetch('http://54.80.109.226:8080/archivosCarpetas', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -60,6 +60,7 @@ const ArchivosVisualizador = () => {
     
     return (
         <div className='discos'>
+            <button className='back-button' onClick={() => navigate('/')}><span className="material-symbols-outlined">arrow_back</span> Volver</button>
             <div className='discos-container'>
                 <h1>Visualizador del Sistema de Archivos</h1>
                 <p>Navegue entre carpetas o visualice archivos</p>

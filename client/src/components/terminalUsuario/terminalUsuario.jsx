@@ -82,7 +82,7 @@ function App() {
         }
 
         try {
-          const response = await fetch('http://localhost:8080/analyze', {
+          const response = await fetch('http://54.80.109.226 :8080/analyze', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -131,7 +131,7 @@ function App() {
       for (const command of commands) {
 
         try{
-          const response = await fetch('http://localhost:8080/analyze', {
+          const response = await fetch('http://54.80.109.226:8080/analyze', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

@@ -18,7 +18,7 @@ const ParticionVisualizador = () => {
     useEffect(() => {
         const fetchParticiones = async () => {
             try {
-                const response = await fetch('http://localhost:8080/partitions', {
+                const response = await fetch('http://54.80.109.226:8080/partitions', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -55,6 +55,7 @@ const ParticionVisualizador = () => {
 
     return (
         <div className='discos'>
+            <button className='back-button' onClick={() => navigate('/')}><span className="material-symbols-outlined">arrow_back</span> Volver</button>
             <div className='discos-container'>
                 <h1>Particiones del Disco {diskName}</h1>
                 <p>Seleccione la partición que desea visualizar:</p>

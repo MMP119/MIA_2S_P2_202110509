@@ -16,7 +16,7 @@ const DiscosVisualizador = () => {
     useEffect(() => {
         const fetchDiscos = async () => {
             try {
-                const response = await fetch('http://localhost:8080/disks',
+                const response = await fetch('http://54.80.109.226:8080/disks',
                     {
                         method: 'POST',
                         headers: {
@@ -54,6 +54,7 @@ const DiscosVisualizador = () => {
 
     return (
         <div className='discos'>
+            <button className='back-button' onClick={() => navigate('/')}><span className="material-symbols-outlined">arrow_back</span> Volver</button>
             <div className='discos-container'>
                 <h1>Visualizador del Sistema de Archivos</h1>
                 <p>Seleccione el disco que desea visualizar o ingresar a la  
